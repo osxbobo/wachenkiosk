@@ -1486,9 +1486,40 @@ async function renderUserMessages(){
     });
 
     body.appendChild(bubbles);
+
+    // User reply row (only show if admin has replied at least once)
+    if(hasReplies){
+      const replyRow=document.createElement('div');
+      replyRow.className='msg-reply-row';
+      const replyInput=document.createElement('input');
+      replyInput.className='msg-reply-input';
+      replyInput.placeholder='Antworten...';
+      replyInput.type='text';
+      replyInput.autocomplete='off';
+      const replyBtn=document.createElement('button');
+      replyBtn.className='btn btn-dark btn-sm';
+      replyBtn.textContent='Senden';
+      replyBtn.addEventListener('click',async()=>{
+        const text=replyInput.value.trim();
+        if(!text)return;
+        const allMsgs2=(await fbGet('messages'))||[];
+        const idx=allMsgs2.findIndex(x=>x.id===m.id);
+        if(idx===-1)return;
+        if(!allMsgs2[idx].replies)allMsgs2[idx].replies=[];
+        allMsgs2[idx].replies.push({from:currentUser.name,text,ts:Date.now(),isUser:true});
+        allMsgs2[idx].readByAdmin=false; // mark unread for admin
+        await fbSet('messages',allMsgs2);
+        replyInput.value='';
+        toast('Antwort gesendet','ok');
+        renderUserMessages();
+      });
+      replyInput.addEventListener('keydown',e=>{if(e.key==='Enter')replyBtn.click();});
+      replyRow.append(replyInput,replyBtn);
+      body.appendChild(replyRow);
+    }
+
     hdr.addEventListener('click',()=>{
       body.classList.toggle('open');
-      // mark as read when opened
       localStorage.setItem(lastReadKey,String(Date.now()));
     });
     wrap.append(hdr,body);
@@ -1550,7 +1581,8 @@ async function renderAdminMessages(){
       const rd=new Date(r.ts);
       const rts=rd.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})+' '+rd.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
       const rb=document.createElement('div');
-      rb.innerHTML='<div class="msg-bubble admin"><strong>'+r.from+':</strong> '+r.text+'<div class="msg-bubble-meta">'+rts+'</div></div>';
+      const bubbleClass=r.isUser?'user':'admin';
+      rb.innerHTML='<div class="msg-bubble '+bubbleClass+'"><strong>'+(r.isUser?r.from:'Admin '+r.from)+':</strong> '+r.text+'<div class="msg-bubble-meta">'+rts+'</div></div>';
       bubbles.appendChild(rb);
     });
     body.appendChild(bubbles);
