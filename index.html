@@ -252,7 +252,7 @@
   </div>
 
   <!-- ── TOP: SCHNELLWAHL ── -->
-  <div class="card" style="margin-bottom:14px">
+  <div class="card" id="loginCard" style="margin-bottom:14px">
     <div class="card-label">Schnellwahl</div>
     <div class="user-grid" id="userGrid"></div>
 
@@ -845,7 +845,8 @@ function finishLogin(user){
   const isAdmin=currentUser.role==='Admin';
   document.getElementById('adminBadge').style.display=isAdmin?'':'none';
   document.getElementById('adminPanel').style.display=isAdmin?'':'none';
-  // show elements that need login
+  // show/hide elements
+  document.getElementById('loginCard').style.display='none';
   document.getElementById('statsRow').style.display='';
   document.getElementById('detailRow').style.display='';
   if(isAdmin){renderUserMgmt();populateSalesMonths();renderSales()}
@@ -883,6 +884,7 @@ function logout(){
   // hide elements that need login
   document.getElementById('statsRow').style.display='none';
   document.getElementById('detailRow').style.display='none';
+  document.getElementById('loginCard').style.display='';
   renderUsers();
   toast('Abgemeldet');
 }
