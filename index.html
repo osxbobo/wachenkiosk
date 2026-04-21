@@ -248,11 +248,32 @@
   <div class="card" style="margin-bottom:14px">
     <div class="card-label">Schnellwahl</div>
     <div class="user-grid" id="userGrid"></div>
-    <div class="register-toggle"><a onclick="toggleRegister()">Neuen Nutzer registrieren</a></div>
-    <div class="register-form" id="registerForm">
-      <input class="text-input" type="text" id="regName" placeholder="Name" autocomplete="off"/>
-      <input class="text-input" type="password" id="regPin" maxlength="4" placeholder="4-stellige PIN" inputmode="numeric"/>
-      <button class="btn btn-dark btn-full" onclick="doRegister()">Registrieren</button>
+
+    <!-- Name + PIN Login -->
+    <div style="border-top:.5px solid var(--border-light);margin-top:14px;padding-top:14px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Mit Name anmelden</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="text-input" type="text" id="nameInput" placeholder="Name" autocomplete="off" style="flex:1"/>
+        <input class="text-input" type="password" id="namePinInput" maxlength="4" placeholder="PIN" inputmode="numeric" style="flex:1;text-align:center;font-family:DM Mono,monospace;letter-spacing:4px;font-size:18px"/>
+        <button class="btn btn-dark" style="height:42px;padding:0 18px" onclick="doLoginByName()">&#x2192;</button>
+      </div>
+    </div>
+
+    <!-- Nutzer registrieren -->
+    <div style="border-top:.5px solid var(--border-light);margin-top:14px;padding-top:14px">
+      <button onclick="toggleRegisterDropdown()" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;padding:0;font-family:DM Sans,sans-serif">
+        <div style="font-size:11px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)">Neuen Nutzer registrieren</div>
+        <span id="regArrow" style="font-size:14px;color:var(--muted);transition:transform .2s">▾</span>
+      </button>
+      <div id="registerForm" style="display:none;margin-top:12px;display:none">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <input class="text-input" type="text" id="regName" placeholder="Name" autocomplete="off"/>
+          <div style="display:flex;gap:8px">
+            <input class="text-input" type="password" id="regPin" maxlength="4" placeholder="4-stellige PIN" inputmode="numeric" style="flex:1;text-align:center;font-family:DM Mono,monospace;letter-spacing:4px;font-size:18px"/>
+            <button class="btn btn-dark" style="height:42px;padding:0 18px" onclick="doRegister()">Registrieren</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -558,11 +579,17 @@ function renderProducts(){
   const grid=document.getElementById('productsGrid');
   document.getElementById('productCount').textContent=products.length+' Artikel';
   grid.innerHTML='';
+  const now3=Date.now();
   products.forEach(p=>{
     const c=document.createElement('div');
     c.className='product-card';
     const imgUrl=p.img||'';
-    c.innerHTML=`<div class="product-img-wrap"><img src="${imgUrl}" alt="${p.name}" loading="lazy" onerror="this.style.opacity=.1;this.style.width='40px'"/></div><div class="product-info"><span class="product-name">${p.name}</span><span class="product-price">${fmt(p.price)}</span></div>`;
+    const isNew=p.addedAt&&(now3-p.addedAt)<3*86400000;
+    c.style.position='relative';
+    c.innerHTML=`
+      ${isNew?'<div style="position:absolute;top:8px;left:8px;background:var(--ok-fg);color:white;font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 8px;border-radius:20px;z-index:1">NEU</div>':''}
+      <div class="product-img-wrap"><img src="${imgUrl}" alt="${p.name}" loading="lazy" onerror="this.style.opacity=.1;this.style.width='40px'"/></div>
+      <div class="product-info"><span class="product-name">${p.name}</span><span class="product-price">${fmt(p.price)}</span></div>`;
     c.addEventListener('click',()=>addProduct(p,c));
     grid.appendChild(c);
   });
@@ -576,20 +603,45 @@ function renderAdminProducts(){
   products.forEach((p,i)=>{
     const row=document.createElement('div');
     row.className='user-mgmt-row';
-    row.style.alignItems='center';
+    row.style.cssText='align-items:flex-start;flex-wrap:wrap;gap:10px';
     // thumb
     const thumb=document.createElement('img');
     thumb.src=p.img||''; thumb.alt=p.name;
-    thumb.style.cssText='width:40px;height:40px;object-fit:contain;border-radius:8px;background:var(--bg);flex-shrink:0';
+    thumb.style.cssText='width:40px;height:40px;object-fit:contain;border-radius:8px;background:var(--bg);flex-shrink:0;margin-top:4px';
     thumb.onerror=()=>{thumb.style.opacity='.2'};
-    // info
-    const info=document.createElement('div'); info.className='user-mgmt-info';
-    const nm=document.createElement('div'); nm.className='user-mgmt-name'; nm.textContent=p.name;
-    if(p.custom){const tag=document.createElement('span');tag.className='role-badge';tag.style.cssText='background:var(--ok-bg);color:var(--ok-fg);border-color:#a7f0ba';tag.textContent='Neu';nm.appendChild(tag);}
-    const pr=document.createElement('div'); pr.className='user-mgmt-meta'; pr.textContent=fmt(p.price);
-    info.append(nm,pr);
+    // info + inline edit
+    const info=document.createElement('div'); info.style.cssText='flex:1;min-width:160px;display:flex;flex-direction:column;gap:6px';
+    // name row
+    const nmRow=document.createElement('div'); nmRow.style.cssText='display:flex;align-items:center;gap:6px';
+    const nmInput=document.createElement('input'); nmInput.className='text-input';
+    nmInput.value=p.name; nmInput.placeholder='Name';
+    nmInput.style.cssText='flex:1;height:34px;font-size:13px;font-weight:500';
+    const isNewP=p.addedAt&&(Date.now()-p.addedAt)<3*86400000;
+    if(isNewP){const tag=document.createElement('span');tag.className='role-badge';tag.style.cssText='background:var(--ok-bg);color:var(--ok-fg);border-color:#a7f0ba;flex-shrink:0';tag.textContent='Neu';nmRow.appendChild(nmInput);nmRow.appendChild(tag);}
+    else{nmRow.appendChild(nmInput);}
+    // price row
+    const prRow=document.createElement('div'); prRow.style.cssText='display:flex;align-items:center;gap:6px';
+    const prInput=document.createElement('input'); prInput.className='text-input';
+    prInput.type='number'; prInput.min='0.01'; prInput.step='0.01';
+    prInput.value=p.price.toFixed(2); prInput.placeholder='Preis €';
+    prInput.style.cssText='width:90px;height:34px;font-size:13px;font-family:DM Mono,monospace';
+    const saveBtn=document.createElement('button'); saveBtn.className='btn btn-blue btn-sm'; saveBtn.textContent='Speichern';
+    saveBtn.addEventListener('click',()=>{
+      const newName=nmInput.value.trim();
+      const newPrice=parseFloat(prInput.value);
+      if(!newName){toast('Name darf nicht leer sein','err');return}
+      if(!newPrice||newPrice<=0){toast('Ungültiger Preis','err');return}
+      products[i].name=newName;
+      products[i].price=newPrice;
+      sv('kiosk_products',products);
+      renderProducts(); renderAdminProducts();
+      toast(newName+' wurde aktualisiert','ok');
+    });
+    prRow.append(prInput,saveBtn);
+    info.append(nmRow,prRow);
     // delete btn
     const del=document.createElement('button'); del.className='btn btn-danger btn-sm'; del.textContent='Entfernen';
+    del.style.cssText='flex-shrink:0;margin-top:4px';
     del.addEventListener('click',()=>removeProduct(i));
     row.append(thumb,info,del);
     list.appendChild(row);
@@ -606,7 +658,7 @@ function addCustomProduct(){
   if(!name){toast('Bitte einen Namen eingeben','err');return}
   if(!priceRaw||priceRaw<=0){toast('Bitte einen gültigen Preis eingeben','err');return}
   if(products.find(p=>p.name.toLowerCase()===name.toLowerCase())){toast('Produkt bereits vorhanden','err');return}
-  products.push({name,price:priceRaw,img:img||'',custom:true});
+  products.push({name,price:priceRaw,img:img||'',custom:true,addedAt:Date.now()});
   sv('kiosk_products',products);
   document.getElementById('newProdName').value='';
   document.getElementById('newProdPrice').value='';
@@ -675,9 +727,22 @@ function finishLogin(user){
   toast('Willkommen, '+currentUser.name+'!','ok');
 }
 
-// legacy - not used but kept for enter-key handler
 function doLogin(){}
-function doLoginByName(){}
+function doLoginByName(){
+  const name=document.getElementById('nameInput').value.trim();
+  const pin=document.getElementById('namePinInput').value;
+  if(!name){toast('Bitte Namen eingeben','err');return}
+  const user=users.find(u=>u.name.toLowerCase()===name.toLowerCase());
+  if(!user){toast('Nutzer nicht gefunden','err');return}
+  if(pin!==user.pin){
+    const inp=document.getElementById('namePinInput');
+    inp.classList.add('error'); setTimeout(()=>inp.classList.remove('error'),500);
+    toast('Falsche PIN','err'); inp.value=''; return;
+  }
+  document.getElementById('nameInput').value='';
+  document.getElementById('namePinInput').value='';
+  finishLogin(user);
+}
 
 // logout
 function logout(){
@@ -1046,7 +1111,15 @@ function switchTab(id,btn){
 }
 
 // register
-function toggleRegister(){document.getElementById('registerForm').classList.toggle('open')}
+function toggleRegister(){}
+function toggleRegisterDropdown(){
+  const form=document.getElementById('registerForm');
+  const arrow=document.getElementById('regArrow');
+  const open=form.style.display==='none'||form.style.display==='';
+  form.style.display=open?'block':'none';
+  arrow.style.transform=open?'rotate(180deg)':'rotate(0deg)';
+  if(open)document.getElementById('regName').focus();
+}
 function doRegister(){
   const name=document.getElementById('regName').value.trim();
   const pin=document.getElementById('regPin').value;
@@ -1067,6 +1140,9 @@ function doRegister(){
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'){
     if(document.activeElement.id==='pinPopupInput')submitPinPopup();
+    if(document.activeElement.id==='namePinInput')doLoginByName();
+    if(document.activeElement.id==='nameInput'){document.getElementById('namePinInput').focus();}
+    if(document.activeElement.id==='regPin')doRegister();
     if(document.activeElement.id==='regPin')doRegister();
     if(document.activeElement.id==='creditAmount')doCredit();
     if(document.activeElement.id==='editBalanceInput')saveEditBalance();
