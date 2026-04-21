@@ -26,8 +26,8 @@
     /* ── LAYOUT ── */
     .page{max-width:980px;margin:0 auto;padding:24px 16px 80px}
     @media(min-width:700px){.page{padding:32px 28px 80px}}
-    .two-col{display:grid;grid-template-columns:1fr;gap:0}
-    @media(min-width:700px){.two-col{grid-template-columns:360px 1fr;gap:20px;align-items:start}}
+    .detail-row{display:grid;grid-template-columns:1fr;gap:14px}
+    @media(min-width:700px){.detail-row{grid-template-columns:1fr 1fr}}
 
     /* ── HEADER ── */
     .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
@@ -70,8 +70,9 @@
     .tab-panel{display:none}.tab-panel.active{display:block}
 
     /* ── USER GRID ── */
-    .user-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-    @media(min-width:420px) and (max-width:699px){.user-grid{grid-template-columns:repeat(4,1fr)}}
+    .user-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+    @media(min-width:500px){.user-grid{grid-template-columns:repeat(5,1fr)}}
+    @media(min-width:700px){.user-grid{grid-template-columns:repeat(7,1fr)}}
     .user-btn{background:var(--bg);border:.5px solid var(--border);border-radius:var(--r-md);padding:10px 6px;cursor:pointer;text-align:center;transition:background .15s,border-color .15s,transform .1s}
     .user-btn:hover{background:var(--accent);border-color:var(--accent);transform:translateY(-1px)}
     .user-btn:hover .avatar,.user-btn.selected .avatar{background:rgba(255,255,255,.15);color:white}
@@ -141,21 +142,21 @@
     .section-badge{font-size:12px;color:var(--muted);background:var(--border-light);padding:3px 10px;border-radius:20px}
 
     /* ── PRODUCTS ── */
-    .products-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;animation:slideUp .35s .16s ease both}
-    @media(min-width:420px) and (max-width:699px){.products-grid{grid-template-columns:repeat(3,1fr)}}
-    @media(min-width:700px){.products-grid{grid-template-columns:repeat(3,1fr)}}
-    @media(min-width:900px){.products-grid{grid-template-columns:repeat(4,1fr)}}
+    .products-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;animation:slideUp .35s .16s ease both}
+    @media(min-width:500px){.products-grid{grid-template-columns:repeat(3,1fr)}}
+    @media(min-width:700px){.products-grid{grid-template-columns:repeat(4,1fr)}}
+    @media(min-width:900px){.products-grid{grid-template-columns:repeat(5,1fr)}}
     .product-card{background:var(--surface);border-radius:var(--r-lg);border:.5px solid var(--border);overflow:hidden;cursor:pointer;transition:border-color .2s,transform .15s,box-shadow .2s;display:flex;flex-direction:column}
     .product-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.07)}
     .product-card:active{transform:scale(.97)}
     .product-card.flash{animation:cardflash .4s ease}
     @keyframes cardflash{0%{background:var(--surface)}30%{background:#e8f5ee}100%{background:var(--surface)}}
-    .product-img-wrap{height:85px;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden}
-    .product-img-wrap img{width:70px;height:70px;object-fit:contain;transition:transform .2s ease}
+    .product-img-wrap{height:120px;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .product-img-wrap img{width:100px;height:100px;object-fit:contain;transition:transform .2s ease}
     .product-card:hover .product-img-wrap img{transform:scale(1.08)}
-    .product-info{padding:8px 10px;display:flex;align-items:center;justify-content:space-between;border-top:.5px solid var(--border-light);gap:4px}
-    .product-name{font-size:12px;font-weight:500;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .product-price{font-size:11px;font-weight:600;color:var(--text);background:var(--border-light);padding:2px 7px;border-radius:7px;font-family:'DM Mono',monospace;flex-shrink:0}
+    .product-info{padding:10px 12px;display:flex;align-items:center;justify-content:space-between;border-top:.5px solid var(--border-light);gap:6px}
+    .product-name{font-size:13px;font-weight:500;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .product-price{font-size:13px;font-weight:600;color:var(--text);background:var(--border-light);padding:3px 9px;border-radius:8px;font-family:'DM Mono',monospace;flex-shrink:0}
 
     /* ── HISTORY ── */
     .history-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:.5px solid var(--border-light);font-size:13px;animation:entryIn .25s ease both}
@@ -243,129 +244,124 @@
     </div>
   </div>
 
-  <div class="two-col">
-
-    <!-- ── LEFT ── -->
-    <div>
-
-      <!-- LOGIN -->
-      <div class="card">
-        <div class="card-label">Schnellwahl</div>
-        <div class="user-grid" id="userGrid"></div>
-        <div class="pin-row">
-          <input class="pin-input" type="password" maxlength="4" placeholder="····" id="pinInput" inputmode="numeric" pattern="[0-9]*" autocomplete="off"/>
-          <button class="btn btn-dark" onclick="doLogin()">Login</button>
-        </div>
-        <div id="nameLoginWrap" style="display:none;margin-top:8px;display:none">
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <input class="text-input" type="text" id="nameInput" placeholder="Name" autocomplete="off" style="flex:1"/>
-            <input class="text-input" type="password" id="namePinInput" maxlength="4" placeholder="PIN" inputmode="numeric" style="width:80px;text-align:center;font-family:DM Mono,monospace;letter-spacing:4px"/>
-            <button class="btn btn-dark" onclick="doLoginByName()" style="padding:0 14px">→</button>
-          </div>
-        </div>
-        <div class="register-toggle"><a onclick="toggleRegister()">Neuen Nutzer registrieren</a></div>
-        <div class="register-form" id="registerForm">
-          <input class="text-input" type="text" id="regName" placeholder="Name" autocomplete="off"/>
-          <input class="text-input" type="password" id="regPin" maxlength="4" placeholder="4-stellige PIN" inputmode="numeric"/>
-          <button class="btn btn-dark btn-full" onclick="doRegister()">Registrieren</button>
-        </div>
-      </div>
-
-      <!-- STATS -->
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-label">Angemeldet als</div>
-          <div class="stat-value" id="statUser" style="font-size:16px;color:var(--hint)">Niemand</div>
-          <div class="stat-sub" id="statSubUser">Bitte einloggen</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Ausgaben</div>
-          <div class="stat-value" id="statSpent">0,00 €</div>
-          <div class="stat-sub" id="statSubMonth">–</div>
-        </div>
-        <div class="stat-card blue">
-          <div class="stat-label">Kontostand</div>
-          <div class="stat-value bal-zero" id="statBalance">0,00 €</div>
-          <div class="stat-sub">Gutschriften minus Ausgaben</div>
-        </div>
-      </div>
-
-      <!-- GUTSCHRIFT -->
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-          <div class="card-label" style="margin:0">Gutschrift einzahlen</div>
-          <span style="font-size:11px;color:var(--hint)" id="gutschriftHint">Bitte einloggen</span>
-        </div>
-        <div class="amount-grid">
-          <button class="amount-btn" onclick="selectAmount(5,this)">5 €</button>
-          <button class="amount-btn" onclick="selectAmount(10,this)">10 €</button>
-          <button class="amount-btn" onclick="selectAmount(20,this)">20 €</button>
-          <button class="amount-btn" onclick="selectAmount(50,this)">50 €</button>
-        </div>
-        <div class="custom-amount-row">
-          <input class="credit-input" type="number" id="creditAmount" min="0.01" step="0.01" placeholder="Eigener Betrag in €"/>
-          <button class="btn btn-blue" onclick="doCredit()">Einzahlen</button>
-        </div>
-        <div class="gutschrift-note">
-          <span class="gutschrift-note-icon">⚠️</span>
-          <span class="gutschrift-note-text">Das Geld muss <strong>physisch in die Wachenkioskkasse</strong> eingelegt werden, bevor du es hier einträgst. Gutschriften ohne Einzahlung werden nicht anerkannt.</span>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- ── RIGHT ── -->
-    <div>
-
-      <!-- ADMIN PANEL -->
-      <div class="admin-panel" id="adminPanel" style="display:none">
-        <div class="admin-panel-title">
-          <div class="card-label" style="margin:0">Admin-Panel</div>
-          <span class="admin-chip">Admin</span>
-        </div>
-        <div class="tab-bar">
-          <button class="tab-btn active" onclick="switchTab('users',this)">Nutzerverwaltung</button>
-          <button class="tab-btn" onclick="switchTab('sales',this)">Verkaufsübersicht</button>
-        </div>
-
-        <!-- TAB: USERS -->
-        <div class="tab-panel active" id="tab-users">
-          <div id="userMgmtList"></div>
-        </div>
-
-        <!-- TAB: SALES -->
-        <div class="tab-panel" id="tab-sales">
-          <div class="sales-month-selector">
-            <select id="salesMonthSelect" onchange="renderSales()"></select>
-          </div>
-          <div class="sales-stats" id="salesStats"></div>
-          <div id="salesList"></div>
-        </div>
-      </div>
-
-      <!-- PRODUCTS -->
-      <div class="section-header">
-        <span class="section-title">Produkte</span>
-        <span class="section-badge" id="productCount">–</span>
-      </div>
-      <div class="products-grid" id="productsGrid"></div>
-
-      <!-- HISTORY -->
-      <div class="card" style="margin-top:14px;animation:slideUp .35s .2s ease both">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <div class="card-label" style="margin:0">Mein Verlauf</div>
-          <button class="btn-ghost" onclick="clearHistory()" id="clearBtn" style="display:none">Leeren</button>
-        </div>
-        <div style="margin-bottom:12px">
-          <select class="history-month-sel" id="historyMonthSelect" onchange="renderHistory()">
-            <option value="">Monat wählen...</option>
-          </select>
-        </div>
-        <div id="historyList"><div class="empty-state">Bitte zuerst anmelden.</div></div>
-      </div>
-
+  <!-- ── TOP: SCHNELLWAHL ── -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-label">Schnellwahl</div>
+    <div class="user-grid" id="userGrid"></div>
+    <div class="register-toggle"><a onclick="toggleRegister()">Neuen Nutzer registrieren</a></div>
+    <div class="register-form" id="registerForm">
+      <input class="text-input" type="text" id="regName" placeholder="Name" autocomplete="off"/>
+      <input class="text-input" type="password" id="regPin" maxlength="4" placeholder="4-stellige PIN" inputmode="numeric"/>
+      <button class="btn btn-dark btn-full" onclick="doRegister()">Registrieren</button>
     </div>
   </div>
+
+  <!-- ── LOGGED-IN AREA (hidden until login) ── -->
+  <!-- STATS -->
+  <div class="stats-row" id="statsRow" style="display:none">
+    <div class="stat-card">
+      <div class="stat-label">Angemeldet als</div>
+      <div class="stat-value" id="statUser" style="font-size:16px;color:var(--hint)">Niemand</div>
+      <div class="stat-sub" id="statSubUser">Bitte einloggen</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Ausgaben</div>
+      <div class="stat-value" id="statSpent">0,00 €</div>
+      <div class="stat-sub" id="statSubMonth">–</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">Kontostand</div>
+      <div class="stat-value bal-zero" id="statBalance">0,00 €</div>
+      <div class="stat-sub">Gutschriften minus Ausgaben</div>
+    </div>
+  </div>
+
+  <!-- GUTSCHRIFT + ADMIN side by side on desktop -->
+  <div class="detail-row" id="detailRow" style="display:none">
+
+    <!-- GUTSCHRIFT -->
+    <div class="card" id="gutschriftCard">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="card-label" style="margin:0">Gutschrift einzahlen</div>
+      </div>
+      <div class="amount-grid">
+        <button class="amount-btn" onclick="selectAmount(5,this)">5 €</button>
+        <button class="amount-btn" onclick="selectAmount(10,this)">10 €</button>
+        <button class="amount-btn" onclick="selectAmount(20,this)">20 €</button>
+        <button class="amount-btn" onclick="selectAmount(50,this)">50 €</button>
+      </div>
+      <div class="custom-amount-row">
+        <input class="credit-input" type="number" id="creditAmount" min="0.01" step="0.01" placeholder="Eigener Betrag in €"/>
+        <button class="btn btn-blue" onclick="doCredit()">Einzahlen</button>
+      </div>
+      <div class="gutschrift-note">
+        <span class="gutschrift-note-icon">⚠️</span>
+        <span class="gutschrift-note-text">Das Geld muss <strong>physisch in die Wachenkioskkasse</strong> eingelegt werden, bevor du es hier einträgst.</span>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="card" id="historyCard">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="card-label" style="margin:0">Mein Verlauf</div>
+        <button class="btn-ghost" onclick="clearHistory()" id="clearBtn" style="display:none">Leeren</button>
+      </div>
+      <div style="margin-bottom:12px">
+        <select class="history-month-sel" id="historyMonthSelect" onchange="renderHistory()">
+          <option value="">Monat wählen...</option>
+        </select>
+      </div>
+      <div id="historyList"><div class="empty-state">Bitte zuerst anmelden.</div></div>
+    </div>
+
+  </div>
+
+  <!-- ADMIN PANEL (full width) -->
+  <div class="admin-panel" id="adminPanel" style="display:none">
+    <div class="admin-panel-title">
+      <div class="card-label" style="margin:0">Admin-Panel</div>
+      <span class="admin-chip">Admin</span>
+    </div>
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('users',this)">Nutzerverwaltung</button>
+      <button class="tab-btn" onclick="switchTab('sales',this)">Verkaufsübersicht</button>
+      <button class="tab-btn" onclick="switchTab('products',this)">Produkte</button>
+    </div>
+    <div class="tab-panel active" id="tab-users">
+      <div id="userMgmtList"></div>
+    </div>
+    <div class="tab-panel" id="tab-sales">
+      <div class="sales-month-selector">
+        <select id="salesMonthSelect" onchange="renderSales()"></select>
+      </div>
+      <div class="sales-stats" id="salesStats"></div>
+      <div id="salesList"></div>
+    </div>
+    <div class="tab-panel" id="tab-products">
+      <!-- Add product form -->
+      <div style="background:var(--bg);border-radius:var(--r-md);padding:14px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Neues Produkt</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <input class="text-input" id="newProdName" placeholder="Name (z.B. Snickers)" autocomplete="off"/>
+          <div style="display:flex;gap:8px">
+            <input class="text-input" id="newProdPrice" type="number" min="0.01" step="0.01" placeholder="Preis in € (z.B. 0.80)" style="flex:1"/>
+            <input class="text-input" id="newProdImg" placeholder="Bild-URL (optional)" style="flex:2"/>
+          </div>
+          <button class="btn btn-dark btn-full" onclick="addCustomProduct()">Produkt hinzufügen</button>
+        </div>
+      </div>
+      <!-- Product list -->
+      <div id="adminProductList"></div>
+    </div>
+  </div>
+
+  <!-- ── PRODUCTS (full width) ── -->
+  <div class="section-header">
+    <span class="section-title">Produkte</span>
+    <span class="section-badge" id="productCount">–</span>
+  </div>
+  <div class="products-grid" id="productsGrid"></div>
+
 </div>
 
 <!-- CONFIRM MODAL -->
@@ -408,6 +404,21 @@
     <div class="modal-actions">
       <button class="btn btn-dark" style="flex:1" onclick="saveEditBalance()">Speichern</button>
       <button class="btn-ghost" onclick="closeEditModal()">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN POPUP (tap on user) -->
+<div class="modal-overlay" id="pinPopup">
+  <div class="modal" style="max-width:280px;text-align:center">
+    <div class="modal-title" id="pinPopupTitle" style="margin-bottom:6px">PIN eingeben</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px" id="pinPopupSub"></div>
+    <input class="pin-input" type="password" maxlength="4" id="pinPopupInput"
+      inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+      style="width:100%;margin-bottom:12px"/>
+    <div class="modal-actions">
+      <button class="btn btn-dark" style="flex:1" onclick="submitPinPopup()">Login</button>
+      <button class="btn-ghost" onclick="closePinPopup()">Abbrechen</button>
     </div>
   </div>
 </div>
@@ -459,7 +470,8 @@ function sv(k,v){localStorage.setItem(k,JSON.stringify(v))}
 
 let users     = ld('kiosk_users', DEFAULT_USERS);
 let purchases  = ld('kiosk_purchases', {});
-let recentUsers= ld('kiosk_recent', []);   // last 5 logged-in names
+let recentUsers= ld('kiosk_recent', []);
+let products   = ld('kiosk_products', null) || PRODUCTS.map(p=>({...p,custom:false}));
 let currentUser=null, selectedUserName=null, editTarget=null;
 
 function saveRecent(name){
@@ -520,73 +532,142 @@ function closeReminder(){
   localStorage.setItem('reminder_dismissed_'+monthKey(),'1');
 }
 
-// render quick-select: only last 5 recent users
+// render quick-select: only last 5 recent users — tap opens PIN popup
 function renderUsers(){
   const grid=document.getElementById('userGrid');
   grid.innerHTML='';
   const recent=recentUsers.map(n=>users.find(u=>u.name===n)).filter(Boolean).slice(0,5);
+  if(!recent.length){
+    grid.innerHTML='<div style="grid-column:1/-1;font-size:12px;color:var(--hint);padding:8px 0">Noch keine Logins — nutze "Neuen Nutzer registrieren".</div>';
+    return;
+  }
   recent.forEach(u=>{
     const btn=document.createElement('button');
-    btn.className='user-btn'+(selectedUserName===u.name?' selected':'');
+    btn.className='user-btn';
     const av=document.createElement('div'); av.className='avatar'; av.textContent=u.initials||mkInits(u.name);
     const nm=document.createElement('div'); nm.className='uname'; nm.textContent=u.name;
     const rl=document.createElement('div'); rl.className='urole'; rl.textContent=u.role||'\u00a0';
     btn.append(av,nm,rl);
-    btn.addEventListener('click',()=>{
-      document.querySelectorAll('.user-btn').forEach(b=>b.classList.remove('selected'));
-      btn.classList.add('selected'); selectedUserName=u.name;
-      document.getElementById('nameLoginWrap').style.display='none';
-      document.getElementById('pinInput').focus();
-    });
+    btn.addEventListener('click',()=>openPinPopup(u.name));
     grid.appendChild(btn);
   });
-  // "other user" button
-  if(users.length>recent.length){
-    const other=document.createElement('button');
-    other.className='user-btn';
-    other.style.cssText='border-style:dashed;opacity:.7';
-    const av=document.createElement('div'); av.className='avatar'; av.textContent='···';
-    const nm=document.createElement('div'); nm.className='uname'; nm.textContent='Anderer';
-    const rl=document.createElement('div'); rl.className='urole'; rl.innerHTML='&nbsp;';
-    other.append(av,nm,rl);
-    other.addEventListener('click',()=>{
-      document.querySelectorAll('.user-btn').forEach(b=>b.classList.remove('selected'));
-      selectedUserName=null;
-      document.getElementById('nameLoginWrap').style.display='';
-      document.getElementById('nameInput').focus();
-    });
-    grid.appendChild(other);
-  }
 }
 
 // render products
 function renderProducts(){
   const grid=document.getElementById('productsGrid');
-  document.getElementById('productCount').textContent=PRODUCTS.length+' Artikel';
+  document.getElementById('productCount').textContent=products.length+' Artikel';
   grid.innerHTML='';
-  PRODUCTS.forEach(p=>{
+  products.forEach(p=>{
     const c=document.createElement('div');
     c.className='product-card';
-    c.innerHTML=`<div class="product-img-wrap"><img src="${p.img}" alt="${p.name}" loading="lazy" onerror="this.style.opacity=.15"/></div><div class="product-info"><span class="product-name">${p.name}</span><span class="product-price">${fmt(p.price)}</span></div>`;
+    const imgUrl=p.img||'';
+    c.innerHTML=`<div class="product-img-wrap"><img src="${imgUrl}" alt="${p.name}" loading="lazy" onerror="this.style.opacity=.1;this.style.width='40px'"/></div><div class="product-info"><span class="product-name">${p.name}</span><span class="product-price">${fmt(p.price)}</span></div>`;
     c.addEventListener('click',()=>addProduct(p,c));
     grid.appendChild(c);
   });
 }
 
+// render admin product list
+function renderAdminProducts(){
+  const list=document.getElementById('adminProductList');
+  if(!list)return;
+  list.innerHTML='';
+  products.forEach((p,i)=>{
+    const row=document.createElement('div');
+    row.className='user-mgmt-row';
+    row.style.alignItems='center';
+    // thumb
+    const thumb=document.createElement('img');
+    thumb.src=p.img||''; thumb.alt=p.name;
+    thumb.style.cssText='width:40px;height:40px;object-fit:contain;border-radius:8px;background:var(--bg);flex-shrink:0';
+    thumb.onerror=()=>{thumb.style.opacity='.2'};
+    // info
+    const info=document.createElement('div'); info.className='user-mgmt-info';
+    const nm=document.createElement('div'); nm.className='user-mgmt-name'; nm.textContent=p.name;
+    if(p.custom){const tag=document.createElement('span');tag.className='role-badge';tag.style.cssText='background:var(--ok-bg);color:var(--ok-fg);border-color:#a7f0ba';tag.textContent='Neu';nm.appendChild(tag);}
+    const pr=document.createElement('div'); pr.className='user-mgmt-meta'; pr.textContent=fmt(p.price);
+    info.append(nm,pr);
+    // delete btn
+    const del=document.createElement('button'); del.className='btn btn-danger btn-sm'; del.textContent='Entfernen';
+    del.addEventListener('click',()=>removeProduct(i));
+    row.append(thumb,info,del);
+    list.appendChild(row);
+  });
+  if(!products.length){
+    list.innerHTML='<div class="empty-state">Keine Produkte vorhanden.</div>';
+  }
+}
+
+function addCustomProduct(){
+  const name=document.getElementById('newProdName').value.trim();
+  const priceRaw=parseFloat(document.getElementById('newProdPrice').value);
+  const img=document.getElementById('newProdImg').value.trim();
+  if(!name){toast('Bitte einen Namen eingeben','err');return}
+  if(!priceRaw||priceRaw<=0){toast('Bitte einen gültigen Preis eingeben','err');return}
+  if(products.find(p=>p.name.toLowerCase()===name.toLowerCase())){toast('Produkt bereits vorhanden','err');return}
+  products.push({name,price:priceRaw,img:img||'',custom:true});
+  sv('kiosk_products',products);
+  document.getElementById('newProdName').value='';
+  document.getElementById('newProdPrice').value='';
+  document.getElementById('newProdImg').value='';
+  renderProducts(); renderAdminProducts();
+  toast(name+' wurde hinzugefügt','ok');
+}
+
+function removeProduct(idx){
+  const p=products[idx];
+  showConfirm('Produkt entfernen','"'+p.name+'" wirklich aus der Liste entfernen?','Ja, entfernen',()=>{
+    products.splice(idx,1);
+    sv('kiosk_products',products);
+    renderProducts(); renderAdminProducts();
+    toast(p.name+' wurde entfernt','adm');
+  });
+}
+
+// PIN popup
+let pinPopupTarget=null;
+function openPinPopup(name){
+  pinPopupTarget=name;
+  const u=users.find(u=>u.name===name);
+  document.getElementById('pinPopupTitle').textContent=u?u.name:'PIN eingeben';
+  document.getElementById('pinPopupSub').textContent=(u&&u.role==='Admin')?'Administrator':'';
+  document.getElementById('pinPopupInput').value='';
+  document.getElementById('pinPopup').classList.add('open');
+  setTimeout(()=>document.getElementById('pinPopupInput').focus(),80);
+}
+function closePinPopup(){
+  document.getElementById('pinPopup').classList.remove('open');
+  pinPopupTarget=null;
+}
+function submitPinPopup(){
+  if(!pinPopupTarget)return;
+  const pin=document.getElementById('pinPopupInput').value;
+  const user=users.find(u=>u.name===pinPopupTarget);
+  if(!user)return;
+  if(pin!==user.pin){
+    const inp=document.getElementById('pinPopupInput');
+    inp.classList.add('error'); setTimeout(()=>inp.classList.remove('error'),500);
+    inp.value='';
+    toast('Falsche PIN','err'); return;
+  }
+  closePinPopup();
+  finishLogin(user);
+}
+document.getElementById('pinPopup').addEventListener('click',function(e){if(e.target===this)closePinPopup()});
+
 // login shared finish
 function finishLogin(user){
   currentUser=user;
   saveRecent(user.name);
-  document.getElementById('pinInput').value='';
-  document.getElementById('namePinInput').value='';
-  document.getElementById('nameInput').value='';
-  document.getElementById('nameLoginWrap').style.display='none';
   document.getElementById('loggedInBar').classList.add('visible');
   document.getElementById('loggedInBarName').textContent='👋 '+currentUser.name;
   const isAdmin=currentUser.role==='Admin';
   document.getElementById('adminBadge').style.display=isAdmin?'':'none';
   document.getElementById('adminPanel').style.display=isAdmin?'':'none';
-  document.getElementById('gutschriftHint').textContent='';
+  // show elements that need login
+  document.getElementById('statsRow').style.display='';
+  document.getElementById('detailRow').style.display='';
   if(isAdmin){renderUserMgmt();populateSalesMonths();renderSales()}
   renderUsers();
   checkReminder();
@@ -594,47 +675,22 @@ function finishLogin(user){
   toast('Willkommen, '+currentUser.name+'!','ok');
 }
 
-// login via quick-select
-function doLogin(){
-  if(!selectedUserName){toast('Bitte erst einen Nutzer wählen','err');return}
-  const pin=document.getElementById('pinInput').value;
-  const user=users.find(u=>u.name===selectedUserName);
-  if(!user)return;
-  if(pin!==user.pin){
-    const inp=document.getElementById('pinInput');
-    inp.classList.add('error'); setTimeout(()=>inp.classList.remove('error'),500);
-    toast('Falsche PIN','err'); inp.value=''; return;
-  }
-  finishLogin(user);
-}
-
-// login via name+pin
-function doLoginByName(){
-  const name=document.getElementById('nameInput').value.trim();
-  const pin=document.getElementById('namePinInput').value;
-  if(!name){toast('Bitte Namen eingeben','err');return}
-  const user=users.find(u=>u.name.toLowerCase()===name.toLowerCase());
-  if(!user){toast('Nutzer nicht gefunden','err');return}
-  if(pin!==user.pin){
-    const inp=document.getElementById('namePinInput');
-    inp.classList.add('error'); setTimeout(()=>inp.classList.remove('error'),500);
-    toast('Falsche PIN','err'); inp.value=''; return;
-  }
-  selectedUserName=user.name;
-  finishLogin(user);
-}
+// legacy - not used but kept for enter-key handler
+function doLogin(){}
+function doLoginByName(){}
 
 // logout
 function logout(){
   currentUser=null; selectedUserName=null;
   document.getElementById('loggedInBar').classList.remove('visible');
   document.getElementById('adminPanel').style.display='none';
-  document.querySelectorAll('.user-btn').forEach(b=>b.classList.remove('selected'));
-  document.getElementById('gutschriftHint').textContent='Bitte einloggen';
   document.getElementById('adminBadge').style.display='none';
   document.getElementById('creditAmount').value='';
   document.querySelectorAll('.amount-btn').forEach(b=>b.classList.remove('sel'));
-  updateStats(); renderHistory();
+  // hide elements that need login
+  document.getElementById('statsRow').style.display='none';
+  document.getElementById('detailRow').style.display='none';
+  renderUsers();
   toast('Abgemeldet');
 }
 
@@ -986,6 +1042,7 @@ function switchTab(id,btn){
   btn.classList.add('active');
   document.getElementById('tab-'+id).classList.add('active');
   if(id==='sales'){populateSalesMonths();renderSales()}
+  if(id==='products'){renderAdminProducts()}
 }
 
 // register
@@ -1009,9 +1066,7 @@ function doRegister(){
 // enter key
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'){
-    if(document.activeElement.id==='pinInput')doLogin();
-    if(document.activeElement.id==='namePinInput')doLoginByName();
-    if(document.activeElement.id==='nameInput'){document.getElementById('namePinInput').focus();}
+    if(document.activeElement.id==='pinPopupInput')submitPinPopup();
     if(document.activeElement.id==='regPin')doRegister();
     if(document.activeElement.id==='creditAmount')doCredit();
     if(document.activeElement.id==='editBalanceInput')saveEditBalance();
