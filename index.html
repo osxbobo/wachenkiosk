@@ -887,6 +887,7 @@ function finishLogin(user){
   const isAdmin=currentUser.role==='Admin';
   document.getElementById('adminBadge').style.display=isAdmin?'':'none';
   document.getElementById('adminPanel').style.display=isAdmin?'':'none';
+  document.getElementById('msgUserCard').style.display=isAdmin?'none':'';
   // show/hide elements
   document.getElementById('loginCard').style.display='none';
   document.getElementById('statsRow').style.display='';
@@ -1426,43 +1427,75 @@ async function sendUserMsg(){
 async function renderUserMessages(){
   const list=document.getElementById('msgUserList');
   if(!list||!currentUser)return;
-  const msgs=(await fbGet('messages'))||[];
-  const mine=msgs.filter(m=>m.from===currentUser.name);
+  const allMsgs=(await fbGet('messages'))||[];
+  const mine=allMsgs.filter(m=>m.from===currentUser.name);
   if(!mine.length){list.innerHTML='';return;}
-  list.innerHTML='<div style="font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:12px 0 8px">Deine Nachrichten</div>';
+
+  // count unread replies (replies added after last user read)
+  const lastReadKey='msg_lastread_'+currentUser.name;
+  const lastRead=parseInt(localStorage.getItem(lastReadKey)||'0');
+  const unreadReplies=mine.reduce((n,m)=>{
+    return n+((m.replies||[]).filter(r=>r.ts>lastRead).length);
+  },0);
+
+  list.innerHTML='<div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:12px 0 8px">'+
+    'Deine Nachrichten'+
+    (unreadReplies>0?'<span class="msg-badge">'+unreadReplies+' neu</span>':'')+
+    '</div>';
+
   mine.slice().reverse().forEach(m=>{
     const d=new Date(m.ts);
     const ts=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+    const newReplies=(m.replies||[]).filter(r=>r.ts>lastRead).length;
     const hasReplies=m.replies&&m.replies.length>0;
+
     const wrap=document.createElement('div');
     wrap.className='msg-thread';
+
     const hdr=document.createElement('div');
     hdr.className='msg-thread-header';
-    hdr.innerHTML=
-      '<span class="msg-thread-from">Du</span>'+
-      '<span class="msg-thread-preview">'+m.text+'</span>'+
-      '<span class="msg-thread-meta">'+ts+(hasReplies?' · '+m.replies.length+' Antwort'+(m.replies.length>1?'en':''):'')+'</span>';
+    if(newReplies>0){const dot=document.createElement('div');dot.className='msg-unread-dot';hdr.appendChild(dot);}
+    const from=document.createElement('span');from.className='msg-thread-from';from.textContent='Du';
+    const prev=document.createElement('span');prev.className='msg-thread-preview';
+    prev.textContent=hasReplies?'Admin: '+(m.replies[m.replies.length-1].text):m.text;
+    const meta=document.createElement('span');meta.className='msg-thread-meta';
+    meta.textContent=ts+(newReplies>0?' · '+newReplies+' neue Antwort'+(newReplies>1?'en':''):(hasReplies?' · '+m.replies.length+' Antwort'+(m.replies.length>1?'en':''):''));
+    hdr.append(from,prev,meta);
+
     const body=document.createElement('div');
-    body.className='msg-body';
+    body.className='msg-body'+(newReplies>0?' open':''); // auto-open if unread replies
     const bubbles=document.createElement('div');
     bubbles.className='msg-bubble-wrap';
+
     // original message
     const orig=document.createElement('div');
     orig.innerHTML='<div class="msg-bubble user">'+m.text+'<div class="msg-bubble-meta">'+ts+'</div></div>';
     bubbles.appendChild(orig);
-    // replies
+
+    // all replies
     (m.replies||[]).forEach(r=>{
       const rd=new Date(r.ts);
       const rts=rd.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})+' '+rd.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+      const isNew=r.ts>lastRead;
       const rb=document.createElement('div');
-      rb.innerHTML='<div class="msg-bubble admin"><strong>Admin '+r.from+':</strong> '+r.text+'<div class="msg-bubble-meta">'+rts+'</div></div>';
+      rb.innerHTML='<div class="msg-bubble admin"'+(isNew?' style="border-color:var(--admin-fg)"':'')+'>'+
+        '<strong>'+r.from+':</strong> '+r.text+
+        '<div class="msg-bubble-meta">'+rts+(isNew?' · <span style="color:var(--admin-fg);font-weight:600">Neu</span>':'')+'</div></div>';
       bubbles.appendChild(rb);
     });
+
     body.appendChild(bubbles);
-    hdr.addEventListener('click',()=>body.classList.toggle('open'));
+    hdr.addEventListener('click',()=>{
+      body.classList.toggle('open');
+      // mark as read when opened
+      localStorage.setItem(lastReadKey,String(Date.now()));
+    });
     wrap.append(hdr,body);
     list.appendChild(wrap);
   });
+
+  // mark as read now
+  localStorage.setItem(lastReadKey,String(Date.now()));
 }
 
 // Admin: update badge count on tab
