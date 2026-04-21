@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wachenkiosk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f7f6f2;
+      --surface: #ffffff;
+      --border: #e2e0d8;
+      --border-light: #f0efe9;
+      --text: #1a1a1a;
+      --text-muted: #999;
+      --text-hint: #bbb;
+      --accent: #1a1a1a;
+      --accent-fg: #ffffff;
+      --success-bg: #e8f5ee;
+      --success-fg: #1a7a45;
+      --danger-bg: #fdecea;
+      --danger-fg: #c0392b;
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-lg: 18px;
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── LAYOUT ── */
+    .page { max-width: 480px; margin: 0 auto; padding: 24px 16px 60px; }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 38px; height: 38px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .logo-icon svg { width: 20px; height: 20px; }
+
+    .logo-text {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    .month-pill {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: var(--success-bg);
+      color: var(--success-fg);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: default;
+    }
+
+    .pulse-dot {
+      width: 7px; height: 7px;
+      background: var(--success-fg);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      border: 0.5px solid var(--border);
+      padding: 20px;
+      margin-bottom: 14px;
+      animation: slideUp 0.35s ease both;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    /* ── USER GRID ── */
+    .user-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .user-btn {
+      background: var(--bg);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 10px 6px;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+
+    .user-btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .user-btn:hover .avatar,
+    .user-btn.selected .avatar { background: rgba(255,255,255,0.15); color: white; }
+    .user-btn:hover .uname,
+    .user-btn.selected .uname { color: white; }
+    .user-btn:hover .urole,
+    .user-btn.selected .urole { color: rgba(255,255,255,0.55); }
+
+    .user-btn.selected {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: var(--border);
+      margin: 0 auto 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: #666;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .uname {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: color 0.15s;
+    }
+
+    .urole {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 1px;
+      min-height: 13px;
+      transition: color 0.15s;
+    }
+
+    /* ── PIN ROW ── */
+    .pin-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .pin-input {
+      flex: 1;
+      height: 44px;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      font-family: 'DM Mono', monospace;
+      font-size: 22px;
+      letter-spacing: 10px;
+      text-align: center;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+
+    .pin-input:focus {
+      border-color: var(--accent);
+      background: var(--surface);
+      box-shadow: 0 0 0 3px rgba(26,26,26,0.07);
+    }
+
+    .pin-input.error {
+      border-color: var(--danger-fg);
+      background: var(--danger-bg);
+      animation: shake 0.3s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    .btn-primary {
+      height: 44px;
+      padding: 0 20px;
+      background: var(--accent);
+      color: var(--accent-fg);
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .btn-primary:hover { background: #333; }
+    .btn-primary:active { transform: scale(0.97); }
+
+    .btn-secondary {
+      height: 36px;
+      padding: 0 14px;
+      background: transparent;
+      color: var(--text-muted);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .btn-secondary:hover { background: var(--bg); color: var(--text); }
+
+    /* ── STATS ROW ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+      animation: slideUp 0.35s 0.08s ease both;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      border: 0.5px solid var(--border);
+      padding: 16px 18px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+
+    .stat-sub {
+      font-size: 11px;
+      color: var(--text-hint);
+      margin-top: 4px;
+    }
+
+    /* ── SECTION HEADER ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      animation: slideUp 0.35s 0.12s ease both;
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .section-badge {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--border-light);
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    /* ── PRODUCTS GRID ── */
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      animation: slideUp 0.35s 0.16s ease both;
+    }
+
+    .product-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      border: 0.5px solid var(--border);
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .product-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.07);
+    }
+
+    .product-card:active { transform: scale(0.97); }
+
+    .product-card.flash {
+      animation: flash 0.4s ease;
+    }
+
+    @keyframes flash {
+      0%   { background: var(--surface); }
+      30%  { background: #e8f5ee; }
+      100% { background: var(--surface); }
+    }
+
+    .product-img-wrap {
+      height: 90px;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+
+    .product-img-wrap img {
+      width: 78px; height: 78px;
+      object-fit: contain;
+      transition: transform 0.2s ease;
+    }
+
+    .product-card:hover .product-img-wrap img { transform: scale(1.08); }
+
+    .product-info {
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 0.5px solid var(--border-light);
+      gap: 6px;
+    }
+
+    .product-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .product-price {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--border-light);
+      padding: 3px 8px;
+      border-radius: 8px;
+      font-family: 'DM Mono', monospace;
+      flex-shrink: 0;
+    }
+
+    /* ── HISTORY ── */
+    .history-section {
+      margin-top: 14px;
+      animation: slideUp 0.35s 0.2s ease both;
+    }
+
+    .history-list { display: flex; flex-direction: column; gap: 0; }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 0;
+      border-bottom: 0.5px solid var(--border-light);
+      font-size: 13px;
+      animation: slideDown 0.25s ease both;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .history-item:last-child { border-bottom: none; }
+
+    .history-name { color: var(--text); font-weight: 500; }
+    .history-time { color: var(--text-hint); font-size: 11px; margin-top: 1px; }
+
+    .history-price {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 24px 0;
+      color: var(--text-hint);
+      font-size: 13px;
+    }
+
+    /* ── REGISTER TOGGLE ── */
+    .register-toggle {
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .register-toggle a {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .register-toggle a:hover { color: var(--text); text-decoration: underline; }
+
+    .register-form {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 0.5px solid var(--border-light);
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .register-form.open { display: flex; }
+
+    .text-input {
+      width: 100%;
+      height: 42px;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      padding: 0 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+
+    .text-input:focus {
+      border-color: var(--accent);
+      background: var(--surface);
+      box-shadow: 0 0 0 3px rgba(26,26,26,0.07);
+    }
+
+    /* ── LOGOUT ── */
+    .logged-in-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--accent);
+      border-radius: var(--radius-md);
+      margin-bottom: 14px;
+      animation: slideUp 0.3s ease both;
+    }
+
+    .logged-in-bar.visible { display: flex; }
+
+    .logged-in-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: white;
+    }
+
+    .logout-btn {
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: white;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .logout-btn:hover { background: rgba(255,255,255,0.25); }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(70px);
+      background: var(--accent);
+      color: white;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 11px 22px;
+      border-radius: 30px;
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 999;
+      max-width: calc(100vw - 40px);
+      text-align: center;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    .toast.success { background: var(--success-fg); }
+    .toast.error-toast { background: var(--danger-fg); }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="6" width="16" height="11" rx="2" fill="white" opacity="0.9"/>
+          <path d="M7 6V5a3 3 0 016 0v1" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="logo-text">Wachenkiosk</span>
+    </div>
+    <div class="month-pill">
+      <div class="pulse-dot"></div>
+      <span id="currentMonth">–</span>
+    </div>
+  </div>
+
+  <!-- LOGGED IN BAR -->
+  <div class="logged-in-bar" id="loggedInBar">
+    <span class="logged-in-name" id="loggedInBarName">–</span>
+    <button class="logout-btn" onclick="logout()">Abmelden</button>
+  </div>
+
+  <!-- LOGIN CARD -->
+  <div class="card" id="loginCard">
+    <div class="card-label">Schnellwahl</div>
+
+    <div class="user-grid" id="userGrid">
+      <!-- filled by JS -->
+    </div>
+
+    <div class="pin-row">
+      <input
+        class="pin-input"
+        type="password"
+        maxlength="4"
+        placeholder="····"
+        id="pinInput"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        autocomplete="off"
+      />
+      <button class="btn-primary" onclick="doLogin()">Login</button>
+    </div>
+
+    <div class="register-toggle">
+      <a onclick="toggleRegister()">Neuen Nutzer registrieren</a>
+    </div>
+
+    <div class="register-form" id="registerForm">
+      <input class="text-input" type="text" id="regName" placeholder="Name" autocomplete="off" />
+      <input class="text-input" type="password" id="regPin" maxlength="4" placeholder="4-stellige PIN" inputmode="numeric" />
+      <button class="btn-primary" style="width:100%" onclick="doRegister()">Registrieren</button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Angemeldet als</div>
+      <div class="stat-value" id="statUser" style="font-size:17px;color:var(--text-hint)">Niemand</div>
+      <div class="stat-sub" id="statSubUser">Bitte einloggen</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Monatsausgaben</div>
+      <div class="stat-value" id="statAmount">0,00 €</div>
+      <div class="stat-sub" id="statSubMonth">–</div>
+    </div>
+  </div>
+
+  <!-- PRODUCTS -->
+  <div class="section-header">
+    <span class="section-title">Produkte</span>
+    <span class="section-badge" id="productCount">–</span>
+  </div>
+
+  <div class="products-grid" id="productsGrid">
+    <!-- filled by JS -->
+  </div>
+
+  <!-- HISTORY -->
+  <div class="history-section card" style="margin-top:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div class="card-label" style="margin:0" id="historyTitle">Meine Einkäufe · –</div>
+      <button class="btn-secondary" onclick="clearHistory()" id="clearBtn" style="display:none">Leeren</button>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="empty-state">Bitte zuerst anmelden.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ── DATA ── */
+  const PRODUCTS = [
+    { name: 'Airwaves',     price: 2.00, img: 'https://www.bestinfood.shop/media/image/product/13012/lg/wrigley-airwaves-cool-cassis-kaugummi-12x-50-dragees-dose~2.webp' },
+    { name: 'Bahlsen Kekse',price: 0.10, img: 'https://m.media-amazon.com/images/I/911UnQ+DvkL._SL1500_.jpg' },
+    { name: 'Chips',        price: 0.70, img: 'https://www.funny-frisch.de/files/produkte/packshots/chipsfrisch/CF_ungarisch_packshot_40.png' },
+    { name: 'Cola Zero',    price: 0.90, img: 'https://shop.klauss.de/cdn/shop/files/coca-cola-zero-ew-pet-12-0-5l-suessgetraenke-alkoholfreie-getraenk_3e4d6483-02bd-4cb8-a3c4-29e83d457002.jpg' },
+    { name: 'Durstlöscher', price: 0.60, img: 'https://sbunion.shop/wp-content/uploads/2023/03/101189_104104_104107_506050Durstloescher500mlGruppe.png' },
+    { name: 'Eis',          price: 0.50, img: 'https://www.langnese-business.de/media/d7/cc/ac/1762523100/Logo%20Langnese%20DE%402x.png' },
+    { name: 'Hanuta',       price: 0.50, img: 'https://cdn.public.steam-time.de/images/info/Ferrero_Hanuta_2er_Pack_44g.jpg' },
+    { name: 'Happy Hippo',  price: 0.50, img: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSpmzX6Dk_eccL9Y4k0-9r35jOidrcFGSq5Pg&s' },
+    { name: 'Haribo Beutel',price: 0.90, img: 'https://www.sweet24.de/out/pictures/master/product/1/175g_haribo_bunte_tuete_beutel.jpg' },
+    { name: 'Haribo Roulette', price: 0.20, img: 'https://assets.printus.de/img/25/8/Zoom_m2391053.jpg?width=416&height=416&impolicy=fit' },
+    { name: 'Mini Muffin',  price: 0.20, img: 'https://sbunion.shop/wp-content/uploads/2022/09/233168Hellma60114800MiniMuffins4003148148616.png' },
+    { name: 'Kinder Country',price: 0.30, img: 'https://media.schaefer-shop.de/is/image/schaefershop/webp1200/schokoriegel-ferrero-kinder-country-packung-mit-20-einzelriegeln-a-23-5-g-img_WS_179524_A' },
+    { name: 'Lotus Biscoff',price: 0.10, img: 'https://cdn02.plentymarkets.com/f3fwwhiwe7th/item/images/718113901/middle/MHD-Lotus-Biscoff-Gebaeck-50-Stk--Karamellkekse-Karamellgebaeck--15-12-2025--718113901.jpg' },
+    { name: 'Mars Riegel',  price: 0.60, img: 'https://aquacasa.es/cdn/shop/files/descarga_18.jpg' },
+    { name: 'Mentos Mini',  price: 0.20, img: 'https://perescandy.de/cdn/shop/files/mentosmini2.jpg' },
+    { name: 'Monster Energy',price: 1.00, img: 'https://www.veganleben.de/media/a8/80/7f/1769616471/energy_monster_zero_zucker_ultra_white_467907_1.webp' },
+    { name: 'Nic Nacs',    price: 0.80, img: 'https://lorenz-snacks.de/sites/default/files/styles/1024/public/2024-08/4018077007231_21001951_packshot_nicnacs_original_riegel_35g_de_at_fop_72dpi_654x654px_3_nr-3248_1.png' },
+    { name: 'Paulaner Cola',price: 0.70, img: 'https://www.paulaner.de/media/pages/de/produkte/cola/cola/modules/product-intro/c467e5fd72-1772445260/pl-cola-dose-0-33l.png' },
+    { name: 'Pick Up',     price: 0.60, img: 'https://m.media-amazon.com/images/I/51vAJ0p8esL.jpg' },
+    { name: 'Popcorn',     price: 0.50, img: 'https://www.produktwarnung.eu/wp-content/uploads/2023/04/livmc1.jpg' },
+    { name: 'Red Bull',    price: 1.00, img: 'https://www.foodpaket.de/cdn/shop/products/RedBull-Energy-Classic-RedBull-1652450300.jpg' },
+    { name: 'Spezi / Limo',price: 0.50, img: 'https://www.bierspezi-online.de/images/spezipaul.png' },
+    { name: 'Sprite',      price: 0.50, img: 'https://img.rewe-static.de/0038639/9360860_digital-image.png' },
+    { name: 'Ültje Erdnüsse',price: 0.80, img: 'https://cdn02.plentymarkets.com/mgt7h3rmbzvp/item/images/1199921593/middle/1199921593-ueltje-Erdnuesse-gesalzen--Knabberartikel--50g-Beutel_1.jpg' },
+  ];
+
+  const DEFAULT_USERS = [
+    { name: 'Florin',               initials: 'FL', role: 'Admin', pin: '0000' },
+    { name: 'GüBö',                 initials: 'GB', role: '',      pin: '0000' },
+    { name: 'Lars Lorenz',          initials: 'LL', role: '',      pin: '0000' },
+    { name: 'Oberst',               initials: 'OB', role: '',      pin: '0000' },
+    { name: 'Schnebbie',            initials: 'SN', role: '',      pin: '0000' },
+    { name: 'Thomas',               initials: 'TH', role: 'Admin', pin: '0000' },
+    { name: 'Thorsten Lukaschewski',initials: 'TL', role: '',      pin: '0000' },
+    { name: 'Timo Becker',          initials: 'TB', role: '',      pin: '0000' },
+    { name: 'rjung',                initials: 'RJ', role: '',      pin: '0000' },
+  ];
+
+  /* ── STATE (localStorage) ── */
+  function loadUsers()    { try { return JSON.parse(localStorage.getItem('kiosk_users'))    || DEFAULT_USERS; } catch { return DEFAULT_USERS; } }
+  function loadPurchases(){ try { return JSON.parse(localStorage.getItem('kiosk_purchases'))|| {}; }           catch { return {}; } }
+  function saveUsers(u)   { localStorage.setItem('kiosk_users', JSON.stringify(u)); }
+  function savePurchases(p){ localStorage.setItem('kiosk_purchases', JSON.stringify(p)); }
+
+  let users     = loadUsers();
+  let purchases = loadPurchases();
+  let currentUser = null;
+  let selectedUserName = null;
+
+  /* ── HELPERS ── */
+  function fmt(n) {
+    return n.toFixed(2).replace('.', ',') + ' €';
+  }
+
+  function monthKey() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  }
+
+  function monthLabel() {
+    return new Date().toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+  }
+
+  function initials(name) {
+    return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+  }
+
+  /* ── TOAST ── */
+  let toastTimer;
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  /* ── RENDER USERS ── */
+  function renderUsers() {
+    const grid = document.getElementById('userGrid');
+    grid.innerHTML = '';
+    users.forEach(u => {
+      const btn = document.createElement('button');
+      btn.className = 'user-btn' + (selectedUserName === u.name ? ' selected' : '');
+      btn.innerHTML = `
+        <div class="avatar">${u.initials || initials(u.name)}</div>
+        <div class="uname">${u.name}</div>
+        <div class="urole">${u.role || '&nbsp;'}</div>
+      `;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.user-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedUserName = u.name;
+        document.getElementById('pinInput').focus();
+      });
+      grid.appendChild(btn);
+    });
+  }
+
+  /* ── RENDER PRODUCTS ── */
+  function renderProducts() {
+    const grid = document.getElementById('productsGrid');
+    document.getElementById('productCount').textContent = PRODUCTS.length + ' Artikel';
+    grid.innerHTML = '';
+    PRODUCTS.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'product-card';
+      card.innerHTML = `
+        <div class="product-img-wrap">
+          <img src="${p.img}" alt="${p.name}" loading="lazy" onerror="this.style.opacity=0.3" />
+        </div>
+        <div class="product-info">
+          <span class="product-name">${p.name}</span>
+          <span class="product-price">${fmt(p.price)}</span>
+        </div>
+      `;
+      card.addEventListener('click', () => addProduct(p, card));
+      grid.appendChild(card);
+    });
+  }
+
+  /* ── LOGIN ── */
+  function doLogin() {
+    if (!selectedUserName) { showToast('Bitte erst einen Nutzer wählen', 'error-toast'); return; }
+    const pin = document.getElementById('pinInput').value;
+    const user = users.find(u => u.name === selectedUserName);
+    if (!user) return;
+    if (pin !== user.pin) {
+      document.getElementById('pinInput').classList.add('error');
+      setTimeout(() => document.getElementById('pinInput').classList.remove('error'), 500);
+      showToast('Falsche PIN', 'error-toast');
+      document.getElementById('pinInput').value = '';
+      return;
+    }
+    currentUser = user;
+    document.getElementById('pinInput').value = '';
+    document.getElementById('loggedInBar').classList.add('visible');
+    document.getElementById('loggedInBarName').textContent = '👋 ' + currentUser.name;
+    updateStats();
+    renderHistory();
+    showToast('Willkommen, ' + currentUser.name + '!', 'success');
+  }
+
+  /* ── LOGOUT ── */
+  function logout() {
+    currentUser = null;
+    selectedUserName = null;
+    document.getElementById('loggedInBar').classList.remove('visible');
+    document.querySelectorAll('.user-btn').forEach(b => b.classList.remove('selected'));
+    updateStats();
+    renderHistory();
+    showToast('Abgemeldet');
+  }
+
+  /* ── ADD PRODUCT ── */
+  function addProduct(p, card) {
+    if (!currentUser) { showToast('Bitte zuerst einloggen', 'error-toast'); return; }
+    const key = monthKey();
+    if (!purchases[currentUser.name]) purchases[currentUser.name] = {};
+    if (!purchases[currentUser.name][key]) purchases[currentUser.name][key] = [];
+    const entry = { product: p.name, price: p.price, time: new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) };
+    purchases[currentUser.name][key].unshift(entry);
+    savePurchases(purchases);
+    card.classList.add('flash');
+    setTimeout(() => card.classList.remove('flash'), 400);
+    updateStats();
+    renderHistory();
+    showToast(p.name + ' für ' + fmt(p.price) + ' eingetragen', 'success');
+  }
+
+  /* ── CLEAR HISTORY ── */
+  function clearHistory() {
+    if (!currentUser) return;
+    const key = monthKey();
+    if (purchases[currentUser.name]) {
+      purchases[currentUser.name][key] = [];
+      savePurchases(purchases);
+    }
+    updateStats();
+    renderHistory();
+    showToast('Verlauf geleert');
+  }
+
+  /* ── UPDATE STATS ── */
+  function updateStats() {
+    const statUser = document.getElementById('statUser');
+    const statSub  = document.getElementById('statSubUser');
+    const statAmt  = document.getElementById('statAmount');
+    if (currentUser) {
+      statUser.textContent = currentUser.name;
+      statUser.style.color = 'var(--text)';
+      statUser.style.fontSize = '20px';
+      statSub.textContent = currentUser.role ? currentUser.role : 'Eingeloggt';
+      const key = monthKey();
+      const entries = (purchases[currentUser.name] && purchases[currentUser.name][key]) || [];
+      const total = entries.reduce((s, e) => s + e.price, 0);
+      statAmt.textContent = fmt(total);
+    } else {
+      statUser.textContent = 'Niemand';
+      statUser.style.color = 'var(--text-hint)';
+      statUser.style.fontSize = '17px';
+      statSub.textContent = 'Bitte einloggen';
+      statAmt.textContent = '0,00 €';
+    }
+  }
+
+  /* ── RENDER HISTORY ── */
+  function renderHistory() {
+    const list = document.getElementById('historyList');
+    const title = document.getElementById('historyTitle');
+    const clearBtn = document.getElementById('clearBtn');
+    title.textContent = 'Meine Einkäufe · ' + monthLabel();
+
+    if (!currentUser) {
+      list.innerHTML = '<div class="empty-state">Bitte zuerst anmelden.</div>';
+      clearBtn.style.display = 'none';
+      return;
+    }
+
+    const key = monthKey();
+    const entries = (purchases[currentUser.name] && purchases[currentUser.name][key]) || [];
+
+    if (entries.length === 0) {
+      list.innerHTML = '<div class="empty-state">Noch keine Einkäufe diesen Monat.</div>';
+      clearBtn.style.display = 'none';
+      return;
+    }
+
+    clearBtn.style.display = '';
+    list.innerHTML = '';
+    entries.forEach(e => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.innerHTML = `
+        <div>
+          <div class="history-name">${e.product}</div>
+          <div class="history-time">${e.time} Uhr</div>
+        </div>
+        <div class="history-price">${fmt(e.price)}</div>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  /* ── REGISTER ── */
+  function toggleRegister() {
+    const form = document.getElementById('registerForm');
+    form.classList.toggle('open');
+  }
+
+  function doRegister() {
+    const name = document.getElementById('regName').value.trim();
+    const pin  = document.getElementById('regPin').value;
+    if (!name) { showToast('Bitte einen Namen eingeben', 'error-toast'); return; }
+    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) { showToast('PIN muss 4 Ziffern sein', 'error-toast'); return; }
+    if (users.find(u => u.name.toLowerCase() === name.toLowerCase())) { showToast('Name bereits vergeben', 'error-toast'); return; }
+    users.push({ name, initials: initials(name), role: '', pin });
+    saveUsers(users);
+    document.getElementById('regName').value = '';
+    document.getElementById('regPin').value = '';
+    document.getElementById('registerForm').classList.remove('open');
+    renderUsers();
+    showToast(name + ' wurde registriert!', 'success');
+  }
+
+  /* ── ENTER KEY ── */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      if (document.activeElement.id === 'pinInput') doLogin();
+      if (document.activeElement.id === 'regPin')   doRegister();
+    }
+  });
+
+  /* ── INIT ── */
+  document.getElementById('currentMonth').textContent = monthLabel();
+  document.getElementById('statSubMonth').textContent = monthLabel();
+  renderUsers();
+  renderProducts();
+  updateStats();
+  renderHistory();
+</script>
+</body>
+</html>
