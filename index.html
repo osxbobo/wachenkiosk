@@ -158,6 +158,13 @@
     .product-name{font-size:13px;font-weight:500;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .product-price{font-size:13px;font-weight:600;color:var(--text);background:var(--border-light);padding:3px 9px;border-radius:8px;font-family:'DM Mono',monospace;flex-shrink:0}
 
+    /* ── PRODUCT BADGES ── */
+    .product-card.sold-out{opacity:.45;pointer-events:none}
+    .prod-badge{position:absolute;color:white;font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 9px;border-radius:20px;z-index:2}
+    .badge-new{top:8px;left:8px;background:var(--ok-fg)}
+    .badge-sold{top:8px;right:8px;background:#1a1a1a}
+    .badge-disc{top:8px;right:8px;background:var(--err-fg)}
+
     /* ── HISTORY ── */
     .history-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:.5px solid var(--border-light);font-size:13px;animation:entryIn .25s ease both}
     @keyframes entryIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
@@ -211,12 +218,6 @@
 
     .history-month-sel{width:100%;height:36px;border:.5px solid var(--border);border-radius:var(--r-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 12px;color:var(--text);outline:none}
     .history-month-sel:focus{border-color:var(--accent)}
-    /* product badges */
-    .product-card.sold-out{opacity:.5;pointer-events:none}
-    .prod-badge{position:absolute;top:8px;left:8px;color:white;font-size:10px;font-weight:700;letter-spacing:.5px;padding:3px 9px;border-radius:20px;z-index:2}
-    .badge-new{background:var(--ok-fg)}
-    .badge-sold{background:#1a1a1a;right:8px;left:auto}
-    .badge-disc{background:var(--err-fg);right:8px;left:auto}
   </style>
 </head>
 <body>
@@ -325,21 +326,6 @@
         <span class="gutschrift-note-icon">⚠️</span>
         <span class="gutschrift-note-text">Das Geld muss <strong>physisch in die Wachenkioskkasse</strong> eingelegt werden, bevor du es hier einträgst.</span>
       </div>
-      <div style="border-top:.5px solid var(--border-light);margin-top:14px;padding-top:14px">
-        <div style="font-size:11px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Nachricht an Admin</div>
-        <textarea id="msgInput" placeholder="Produktvorschlag, Feedback..." style="width:100%;height:80px;border:.5px solid var(--border);border-radius:var(--r-sm);background:var(--bg);font-family:DM Sans,sans-serif;font-size:13px;padding:10px;color:var(--text);outline:none;resize:none"></textarea>
-        <button class="btn btn-dark" style="width:100%;height:38px;margin-top:8px;font-size:13px" onclick="sendMessage()">Senden</button>
-      </div>
-      <div style="border-top:.5px solid var(--border-light);margin-top:14px;padding-top:14px">
-        <div style="font-size:11px;font-weight:600;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Zahlungserinnerung</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Wann an offene Zahlungen erinnern?</div>
-        <div class="reminder-opts">
-          <button class="reminder-opt" id="remOpt-login" onclick="setReminderPref('login',this)">Jeden Login</button>
-          <button class="reminder-opt" id="remOpt-weekly" onclick="setReminderPref('weekly',this)">Wöchentlich</button>
-          <button class="reminder-opt" id="remOpt-monthly" onclick="setReminderPref('monthly',this)">Monatlich</button>
-          <button class="reminder-opt" id="remOpt-never" onclick="setReminderPref('never',this)">Nie</button>
-        </div>
-      </div>
     </div>
 
     <!-- HISTORY -->
@@ -365,12 +351,11 @@
       <span class="admin-chip">Admin</span>
     </div>
     <div class="tab-bar">
-      <button class="tab-btn active" onclick="switchTab('sales',this)">Übersicht</button>
-      <button class="tab-btn" onclick="switchTab('users',this)">Nutzer</button>
+      <button class="tab-btn active" onclick="switchTab('users',this)">Nutzerverwaltung</button>
+      <button class="tab-btn" onclick="switchTab('sales',this)">Verkaufsübersicht</button>
       <button class="tab-btn" onclick="switchTab('products',this)">Produkte</button>
-      <button class="tab-btn" id="msgTabBtn" onclick="switchTab('messages',this)">Nachrichten</button>
     </div>
-    <div class="tab-panel" id="tab-users">
+    <div class="tab-panel active" id="tab-users">
       <div id="userMgmtList"></div>
     </div>
     <div class="tab-panel" id="tab-sales">
@@ -395,10 +380,6 @@
       </div>
       <!-- Product list -->
       <div id="adminProductList"></div>
-    </div>
-    <div class="tab-panel" id="tab-messages">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Nachrichten von Nutzern</div>
-      <div id="adminMsgList"><div class="empty-state">Keine Nachrichten vorhanden.</div></div>
     </div>
   </div>
 
@@ -610,13 +591,12 @@ async function initFirebase(){
     fbListen('recent',val=>{ recentUsers=val||[]; renderUsers(); });
 
     // boot UI
-    updateClock();
+    document.getElementById('currentMonth').textContent=monthLabel();
     renderUsers();
     renderProducts();
     updateStats();
     renderHistory();
     checkReminder();
-    checkRememberMe();
   } catch(e){
     hideLoading();
     toast('Fehler beim Laden: '+e.message,'err');
@@ -704,23 +684,25 @@ function renderProducts(){
   const now3=Date.now();
   products.forEach(p=>{
     const c=document.createElement('div');
-    c.className='product-card'+(p.soldOut?' sold-out':'');
-    const imgUrl=p.img||'';
+    const isSold=!!p.soldOut;
     const isNew=p.addedAt&&(now3-p.addedAt)<3*86400000;
-    const disc=p.discount>0;
-    const finalPrice=disc?parseFloat((p.price*(1-p.discount/100)).toFixed(2)):p.price;
+    const hasDisc=p.discount>0;
+    const finalPrice=hasDisc?parseFloat((p.price*(1-p.discount/100)).toFixed(2)):p.price;
+    c.className='product-card'+(isSold?' sold-out':'');
     c.style.position='relative';
+    // badges
     let badges='';
-    if(isNew)badges+='<div class="prod-badge badge-new">NEU</div>';
-    if(p.soldOut)badges+='<div class="prod-badge badge-sold">AUSVERKAUFT</div>';
-    else if(disc)badges+='<div class="prod-badge badge-disc">-'+p.discount+'%</div>';
-    const priceHtml=disc
-      ?'<span style="text-decoration:line-through;opacity:.5;font-size:11px;font-family:DM Mono,monospace">'+fmt(p.price)+'</span> <span class="product-price" style="background:var(--err-bg);color:var(--err-fg)">'+fmt(finalPrice)+'</span>'
-      :'<span class="product-price">'+fmt(p.price)+'</span>';
+    if(isNew) badges+='<div class="prod-badge badge-new">NEU</div>';
+    if(isSold) badges+='<div class="prod-badge badge-sold">AUSVERKAUFT</div>';
+    else if(hasDisc) badges+='<div class="prod-badge badge-disc">-'+p.discount+'%</div>';
+    // price html
+    const priceHtml=hasDisc
+      ?`<span style="text-decoration:line-through;opacity:.45;font-size:11px;font-family:'DM Mono',monospace">${fmt(p.price)}</span>&nbsp;<span class="product-price" style="background:var(--err-bg);color:var(--err-fg)">${fmt(finalPrice)}</span>`
+      :`<span class="product-price">${fmt(p.price)}</span>`;
     c.innerHTML=badges+
-      '<div class="product-img-wrap"><img src="'+imgUrl+'" alt="'+p.name+'" loading="lazy" onerror="this.style.opacity=.1"/></div>'+
-      '<div class="product-info"><span class="product-name">'+p.name+'</span><div>'+priceHtml+'</div></div>';
-    if(!p.soldOut)c.addEventListener('click',()=>addProduct(p,c));
+      `<div class="product-img-wrap"><img src="${p.img||''}" alt="${p.name}" loading="lazy" onerror="this.style.opacity=.1"/></div>`+
+      `<div class="product-info"><span class="product-name">${p.name}</span><div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${priceHtml}</div></div>`;
+    if(!isSold) c.addEventListener('click',()=>addProduct(p,c));
     grid.appendChild(c);
   });
 }
@@ -769,19 +751,27 @@ function renderAdminProducts(){
     });
     prRow.append(prInput,saveBtn);
     info.append(nmRow,prRow);
-    // delete btn
+    // buttons row
+    const btns=document.createElement('div'); btns.style.cssText='display:flex;flex-direction:column;gap:6px;flex-shrink:0;margin-top:4px';
+    // sold-out
     const btnSold=document.createElement('button'); btnSold.className='btn btn-sm';
-    btnSold.style.cssText='flex-shrink:0;margin-top:4px;background:var(--warn-bg);color:var(--warn-fg);border:.5px solid var(--warn-border)';
-    btnSold.textContent=p.soldOut?'Verfügbar':'Ausverkauft';
+    btnSold.style.cssText=p.soldOut
+      ?'background:var(--ok-bg);color:var(--ok-fg);border:.5px solid #a7f0ba'
+      :'background:var(--warn-bg);color:var(--warn-fg);border:.5px solid var(--warn-border)';
+    btnSold.textContent=p.soldOut?'✓ Verfügbar':'Ausverkauft';
     btnSold.addEventListener('click',()=>toggleSoldOut(i));
+    // discount
     const btnDisc=document.createElement('button'); btnDisc.className='btn btn-sm';
-    btnDisc.style.cssText='flex-shrink:0;margin-top:4px;background:var(--err-bg);color:var(--err-fg);border:.5px solid #f5c6c6';
-    btnDisc.textContent=p.discount?'-'+p.discount+'%':'Rabatt';
+    btnDisc.style.cssText=p.discount>0
+      ?'background:var(--err-bg);color:var(--err-fg);border:.5px solid #f5c6c6'
+      :'background:var(--bg);color:var(--muted);border:.5px solid var(--border)';
+    btnDisc.textContent=p.discount>0?'-'+p.discount+'% Rabatt':'Rabatt';
     btnDisc.addEventListener('click',()=>setDiscount(i));
-    const del=document.createElement('button'); del.className='btn btn-danger btn-sm'; del.textContent='X';
-    del.style.cssText='flex-shrink:0;margin-top:4px';
+    // delete
+    const del=document.createElement('button'); del.className='btn btn-danger btn-sm'; del.textContent='Entfernen';
     del.addEventListener('click',()=>removeProduct(i));
-    row.append(thumb,info,btnSold,btnDisc,del);
+    btns.append(btnSold,btnDisc,del);
+    row.append(thumb,info,btns);
     list.appendChild(row);
   });
   if(!products.length){
@@ -858,12 +848,10 @@ function finishLogin(user){
   // show elements that need login
   document.getElementById('statsRow').style.display='';
   document.getElementById('detailRow').style.display='';
-  document.getElementById('loginCard').style.display='none';
   if(isAdmin){renderUserMgmt();populateSalesMonths();renderSales()}
   renderUsers();
   checkReminder();
-  updateStats(); renderHistory(); updateReminderUI(); checkBalanceReminder();
-  if(!silent){const rm=document.getElementById('rememberMe');if(rm&&rm.checked)localStorage.setItem('kiosk_remembered',JSON.stringify({name:user.name,ts:Date.now()}));}
+  updateStats(); renderHistory();
   toast('Willkommen, '+currentUser.name+'!','ok');
 }
 
@@ -895,8 +883,6 @@ function logout(){
   // hide elements that need login
   document.getElementById('statsRow').style.display='none';
   document.getElementById('detailRow').style.display='none';
-  document.getElementById('loginCard').style.display='';
-  localStorage.removeItem('kiosk_remembered');
   renderUsers();
   toast('Abgemeldet');
 }
@@ -907,8 +893,7 @@ function addProduct(p,card){
   const key=monthKey();
   if(!purchases[currentUser.name])purchases[currentUser.name]={};
   if(!purchases[currentUser.name][key])purchases[currentUser.name][key]=[];
-  const finalP=p.discount>0?parseFloat((p.price*(1-p.discount/100)).toFixed(2)):p.price;
-  purchases[currentUser.name][key].unshift({type:'purchase',product:p.name+(p.discount>0?' (-'+p.discount+'%)':''),price:finalP,time:new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}),ts:Date.now()});
+  purchases[currentUser.name][key].unshift({type:'purchase',product:p.name,price:p.price,time:new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}),ts:Date.now()});
   svPurchases();
   card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'),400);
   updateStats(); renderHistory();
@@ -1226,35 +1211,21 @@ function renderSales(){
     list.innerHTML='<div class="empty-state">Keine Einträge in diesem Monat.</div>';return;
   }
 
-  const activeRows=rows.filter(r=>r.count>0);
-  if(!activeRows.length){list.innerHTML='<div class="empty-state">Keine Einträge in diesem Monat.</div>';return;}
-  const table=document.createElement('table'); table.className='sales-table';
-  table.innerHTML='<thead><tr><th>Nutzer</th><th>Ausgaben</th><th>Eingezahlt</th><th>Saldo</th><th>#</th></tr></thead>';
-  const tbody=document.createElement('tbody');
-  activeRows.forEach(r=>{
-    const diff=r.credited-r.spent;
-    const diffStr=(diff>0?'+':diff<0?'-':'')+fmt(Math.abs(diff));
-    const diffColor=diff>0?'var(--ok-fg)':diff<0?'var(--err-fg)':'var(--hint)';
-    const tr=document.createElement('tr');
-    tr.innerHTML='<td style="font-weight:600">'+r.name+'</td>'+
-      '<td style="color:var(--err-fg);font-family:DM Mono,monospace">'+fmt(r.spent)+'</td>'+
-      '<td style="color:var(--blue-fg);font-family:DM Mono,monospace">'+fmt(r.credited)+'</td>'+
-      '<td style="color:'+diffColor+';font-family:DM Mono,monospace;font-weight:600">'+diffStr+'</td>'+
-      '<td style="color:var(--muted)">'+r.count+'</td>';
-    tbody.appendChild(tr);
+  list.innerHTML='';
+  rows.filter(r=>r.count>0).forEach(r=>{
+    const diff=r.credited-r.spent; // positive = has credit, negative = owes money
+    const diffStr=diff>0?'+'+fmt(diff):'-'+fmt(Math.abs(diff));
+    const diffClass=diff>0?'pos':diff<0?'neg':'zero';
+    const row=document.createElement('div');
+    row.className='sales-row';
+    row.innerHTML=`
+      <div>
+        <div class="sales-user">${r.name}</div>
+        <div class="sales-detail">${r.count} Einträge · Ausgaben: ${fmt(r.spent)} · Eingezahlt: ${fmt(r.credited)}</div>
+      </div>
+      <div class="sales-amount ${diffClass}" title="Saldo">${diffStr}</div>`;
+    list.appendChild(row);
   });
-  const totSpent=activeRows.reduce((s,r)=>s+r.spent,0);
-  const totCred=activeRows.reduce((s,r)=>s+r.credited,0);
-  const totDiff=totCred-totSpent;
-  const totColor=totDiff>0?'var(--ok-fg)':totDiff<0?'var(--err-fg)':'var(--hint)';
-  const tfoot=document.createElement('tfoot');
-  tfoot.innerHTML='<tr style="font-weight:700;border-top:.5px solid var(--border)"><td style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px">Gesamt</td>'+
-    '<td style="color:var(--err-fg);font-family:DM Mono,monospace">'+fmt(totSpent)+'</td>'+
-    '<td style="color:var(--blue-fg);font-family:DM Mono,monospace">'+fmt(totCred)+'</td>'+
-    '<td style="color:'+totColor+';font-family:DM Mono,monospace">'+(totDiff>0?'+':totDiff<0?'-':'')+fmt(Math.abs(totDiff))+'</td>'+
-    '<td style="color:var(--muted)">'+activeRows.reduce((s,r)=>s+r.count,0)+'</td></tr>';
-  table.appendChild(tbody); table.appendChild(tfoot);
-  list.innerHTML=''; list.appendChild(table);
 }
 
 // tab switching
@@ -1265,8 +1236,6 @@ function switchTab(id,btn){
   document.getElementById('tab-'+id).classList.add('active');
   if(id==='sales'){populateSalesMonths();renderSales()}
   if(id==='products'){renderAdminProducts()}
-  if(id==='messages'){renderAdminMessages()}
-  if(id==='messages'){renderAdminMessages()}
 }
 
 // register
@@ -1370,23 +1339,7 @@ function savePinChange(){
 }
 document.getElementById('pinModal').addEventListener('click',function(e){if(e.target===this)closePinModal()});
 
-function updateClock(){const d=new Date();const dm=document.getElementById('currentDate');const tm=document.getElementById('currentTime');if(dm)dm.textContent=d.toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});if(tm)tm.textContent=d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
-setInterval(updateClock,1000);
-
-function checkRememberMe(){const saved=localStorage.getItem('kiosk_remembered');if(!saved)return;try{const data=JSON.parse(saved);if(Date.now()-data.ts>30*24*60*60*1000){localStorage.removeItem('kiosk_remembered');return;}const user=users.find(u=>u.name===data.name);if(user)finishLogin(user,true);}catch(e){localStorage.removeItem('kiosk_remembered');}}
-
-function setReminderPref(pref,btn){if(!currentUser)return;const u=users.find(u=>u.name===currentUser.name);if(u){u.reminderPref=pref;svUsers();}updateReminderUI();toast('Erinnerung: '+btn.textContent,'ok');}
-function updateReminderUI(){if(!currentUser)return;const u=users.find(u=>u.name===currentUser.name);const pref=(u&&u.reminderPref)||'monthly';document.querySelectorAll('.reminder-opt').forEach(b=>b.classList.remove('active'));const el=document.getElementById('remOpt-'+pref);if(el)el.classList.add('active');}
-function checkBalanceReminder(){if(!currentUser)return;const u=users.find(u=>u.name===currentUser.name);const pref=(u&&u.reminderPref)||'monthly';if(pref==='never')return;const bal=userBalance(currentUser.name);if(bal>=0)return;const key='bal_rem_'+currentUser.name;const last=parseInt(localStorage.getItem(key)||'0');const now=Date.now();let show=false;if(pref==='login')show=true;else if(pref==='weekly')show=(now-last)>7*86400000;else if(pref==='monthly')show=(now-last)>30*86400000;if(show){localStorage.setItem(key,String(now));setTimeout(()=>toast('Offener Betrag: '+fmt(Math.abs(bal))+' bitte einzahlen!','err'),1500);}}
-
-async function sendMessage(){if(!currentUser)return;const text=document.getElementById('msgInput').value.trim();if(!text){toast('Bitte Nachricht eingeben','err');return;}const msgs=(await fbGet('messages'))||[];msgs.push({from:currentUser.name,text,ts:Date.now(),read:false});await fbSet('messages',msgs);document.getElementById('msgInput').value='';toast('Nachricht gesendet!','ok');}
-async function renderAdminMessages(){const list=document.getElementById('adminMsgList');if(!list)return;const msgs=(await fbGet('messages'))||[];const unread=msgs.filter(m=>!m.read).length;updateMsgBadge(unread);if(!msgs.length){list.innerHTML='<div class="empty-state">Keine Nachrichten.</div>';return;}await fbSet('messages',msgs.map(m=>({...m,read:true})));list.innerHTML='';[...msgs].reverse().forEach(m=>{const d=new Date(m.ts);const ts=d.toLocaleDateString('de-DE')+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});const div=document.createElement('div');div.className='msg-bubble';div.innerHTML='<div style="font-size:13px;line-height:1.5;color:var(--text)">'+m.text+'</div><div class="msg-meta"><strong>'+m.from+'</strong> - '+ts+'</div>';list.appendChild(div);});}
-function updateMsgBadge(n){const btn=document.getElementById('msgTabBtn');if(btn){btn.textContent=n>0?'Nachrichten ('+n+')':'Nachrichten';btn.style.color=n>0?'var(--err-fg)':'';}}
-
-function toggleSoldOut(idx){products[idx].soldOut=!products[idx].soldOut;svProducts();renderProducts();renderAdminProducts();toast(products[idx].name+(products[idx].soldOut?' ausverkauft':' verfuegbar'),'adm');}
-function setDiscount(idx){const p=products[idx];const val=prompt('Rabatt % fuer "'+p.name+'" (0=kein):',String(p.discount||0));if(val===null)return;const pct=Math.max(0,Math.min(99,parseInt(val)||0));p.discount=pct;svProducts();renderProducts();renderAdminProducts();toast(pct?p.name+': -'+pct+'%':p.name+': kein Rabatt','ok');}
-
-// ── AUSVERKAUFT / RABATT ──
+// ── AUSVERKAUFT ──
 function toggleSoldOut(idx){
   products[idx].soldOut=!products[idx].soldOut;
   svProducts();
@@ -1395,13 +1348,14 @@ function toggleSoldOut(idx){
   toast(products[idx].name+(products[idx].soldOut?' ist jetzt ausverkauft':' ist wieder verfügbar'),'adm');
 }
 
+// ── RABATT ──
 function setDiscount(idx){
   const p=products[idx];
-  const current=p.discount||0;
-  const val=prompt('Rabatt in % für "'+p.name+'" eingeben (aktuell: '+current+'%, 0 = kein Rabatt):',String(current));
+  const cur=p.discount||0;
+  const val=prompt('Rabatt in % für "'+p.name+'" (aktuell: '+cur+'%, 0 = kein Rabatt):',String(cur));
   if(val===null)return;
   const pct=Math.max(0,Math.min(99,parseInt(val)||0));
-  if(pct===current){return;}
+  if(pct===cur)return;
   p.discount=pct;
   svProducts();
   renderProducts();
