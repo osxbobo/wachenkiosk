@@ -1456,15 +1456,15 @@ async function renderUserMessages(){
     const hdr=document.createElement('div');
     hdr.className='msg-thread-header';
     if(newReplies>0){const dot=document.createElement('div');dot.className='msg-unread-dot';hdr.appendChild(dot);}
-    const from=document.createElement('span');from.className='msg-thread-from';from.textContent='Du';
+    const fromEl=document.createElement('span');fromEl.className='msg-thread-from';fromEl.textContent='Du';
     const prev=document.createElement('span');prev.className='msg-thread-preview';
     prev.textContent=hasReplies?'Admin: '+(m.replies[m.replies.length-1].text):m.text;
     const meta=document.createElement('span');meta.className='msg-thread-meta';
-    meta.textContent=ts+(newReplies>0?' · '+newReplies+' neue Antwort'+(newReplies>1?'en':''):(hasReplies?' · '+m.replies.length+' Antwort'+(m.replies.length>1?'en':''):''));
-    hdr.append(from,prev,meta);
+    meta.textContent=ts+(newReplies>0?' · '+newReplies+' neu':(hasReplies?' · '+m.replies.length+' Antwort'+(m.replies.length>1?'en':''):''));
+    hdr.append(fromEl,prev,meta);
 
     const body=document.createElement('div');
-    body.className='msg-body'+(newReplies>0?' open':''); // auto-open if unread replies
+    body.className='msg-body'+(newReplies>0?' open':'');
     const bubbles=document.createElement('div');
     bubbles.className='msg-bubble-wrap';
 
@@ -1478,45 +1478,52 @@ async function renderUserMessages(){
       const rd=new Date(r.ts);
       const rts=rd.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})+' '+rd.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
       const isNew=r.ts>lastRead;
+      const isUserReply=r.isUser;
       const rb=document.createElement('div');
-      rb.innerHTML='<div class="msg-bubble admin"'+(isNew?' style="border-color:var(--admin-fg)"':'')+'>'+
-        '<strong>'+r.from+':</strong> '+r.text+
-        '<div class="msg-bubble-meta">'+rts+(isNew?' · <span style="color:var(--admin-fg);font-weight:600">Neu</span>':'')+'</div></div>';
+      rb.innerHTML='<div class="msg-bubble '+(isUserReply?'user':'admin')+'"'+(isNew&&!isUserReply?' style="border-color:var(--admin-fg)"':'')+'>'+
+        '<strong>'+(isUserReply?r.from:'Admin '+r.from)+':</strong> '+r.text+
+        '<div class="msg-bubble-meta">'+rts+(isNew&&!isUserReply?' · <span style="color:var(--admin-fg);font-weight:600">Neu</span>':'')+'</div></div>';
       bubbles.appendChild(rb);
     });
 
     body.appendChild(bubbles);
 
-    // User reply row (only show if admin has replied at least once)
-    if(hasReplies){
-      const replyRow=document.createElement('div');
-      replyRow.className='msg-reply-row';
-      const replyInput=document.createElement('input');
-      replyInput.className='msg-reply-input';
-      replyInput.placeholder='Antworten...';
-      replyInput.type='text';
-      replyInput.autocomplete='off';
-      const replyBtn=document.createElement('button');
-      replyBtn.className='btn btn-dark btn-sm';
-      replyBtn.textContent='Senden';
-      replyBtn.addEventListener('click',async()=>{
-        const text=replyInput.value.trim();
-        if(!text)return;
+    // Reply row — always visible when thread is open
+    const replyRow=document.createElement('div');
+    replyRow.className='msg-reply-row';
+    const replyInput=document.createElement('input');
+    replyInput.className='msg-reply-input';
+    replyInput.placeholder='Nachricht hinzufügen...';
+    replyInput.type='text';
+    replyInput.autocomplete='off';
+    const replyBtn=document.createElement('button');
+    replyBtn.className='btn btn-dark btn-sm';
+    replyBtn.textContent='Senden';
+    replyBtn.addEventListener('click',async()=>{
+      const text=replyInput.value.trim();
+      if(!text)return;
+      replyBtn.disabled=true;
+      replyBtn.textContent='...';
+      try{
         const allMsgs2=(await fbGet('messages'))||[];
-        const idx=allMsgs2.findIndex(x=>x.id===m.id);
-        if(idx===-1)return;
+        // find by ts+from (robust, works even without id)
+        const idx=allMsgs2.findIndex(x=>x.ts===m.ts&&x.from===m.from);
+        if(idx===-1){toast('Nachricht nicht gefunden','err');return;}
         if(!allMsgs2[idx].replies)allMsgs2[idx].replies=[];
         allMsgs2[idx].replies.push({from:currentUser.name,text,ts:Date.now(),isUser:true});
-        allMsgs2[idx].readByAdmin=false; // mark unread for admin
+        allMsgs2[idx].readByAdmin=false;
         await fbSet('messages',allMsgs2);
         replyInput.value='';
-        toast('Antwort gesendet','ok');
+        toast('Gesendet!','ok');
         renderUserMessages();
-      });
-      replyInput.addEventListener('keydown',e=>{if(e.key==='Enter')replyBtn.click();});
-      replyRow.append(replyInput,replyBtn);
-      body.appendChild(replyRow);
-    }
+      }finally{
+        replyBtn.disabled=false;
+        replyBtn.textContent='Senden';
+      }
+    });
+    replyInput.addEventListener('keydown',e=>{if(e.key==='Enter')replyBtn.click();});
+    replyRow.append(replyInput,replyBtn);
+    body.appendChild(replyRow);
 
     hdr.addEventListener('click',()=>{
       body.classList.toggle('open');
