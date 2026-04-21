@@ -485,7 +485,8 @@
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px" id="pinPopupSub"></div>
     <input class="pin-input" type="password" maxlength="4" id="pinPopupInput"
       inputmode="numeric" pattern="[0-9]*" autocomplete="off"
-      style="width:100%;margin-bottom:12px"/>
+      style="width:100%;margin-bottom:12px"
+      oninput="if(this.value.length===4)submitPinPopup()"/>
     <div class="modal-actions">
       <button class="btn btn-dark" style="flex:1" onclick="submitPinPopup()">Login</button>
       <button class="btn-ghost" onclick="closePinPopup()">Abbrechen</button>
