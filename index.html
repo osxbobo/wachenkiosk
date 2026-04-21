@@ -446,7 +446,31 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+// ── FIREBASE SETUP ──
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getDatabase, ref, set, get, onValue, update, remove, push } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCJFrgTCFutsiTuskFO3IAcmfc5XFc8fHA",
+  authDomain: "wachenkiosk-80af0.firebaseapp.com",
+  databaseURL: "https://wachenkiosk-80af0-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "wachenkiosk-80af0",
+  storageBucket: "wachenkiosk-80af0.firebasestorage.app",
+  messagingSenderId: "668296529992",
+  appId: "1:668296529992:web:9f65b3b127abc12640707d"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+// ── Firebase helpers ──
+async function fbGet(path){ const s=await get(ref(db,path)); return s.exists()?s.val():null; }
+async function fbSet(path,val){ await set(ref(db,path),val); }
+async function fbUpdate(path,val){ await update(ref(db,path),val); }
+async function fbRemove(path){ await remove(ref(db,path)); }
+function fbListen(path,cb){ onValue(ref(db,path),s=>cb(s.exists()?s.val():null)); }
+
 const PRODUCTS=[
   {name:'Airwaves',price:2.00,img:'https://www.bestinfood.shop/media/image/product/13012/lg/wrigley-airwaves-cool-cassis-kaugummi-12x-50-dragees-dose~2.webp'},
   {name:'Bahlsen Kekse',price:0.10,img:'https://m.media-amazon.com/images/I/911UnQ+DvkL._SL1500_.jpg'},
@@ -486,20 +510,92 @@ const DEFAULT_USERS=[
   {name:'rjung',initials:'RJ',role:'',pin:'0000'},
 ];
 
-function ld(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch{return d}}
-function sv(k,v){localStorage.setItem(k,JSON.stringify(v))}
-
-let users     = ld('kiosk_users', DEFAULT_USERS);
-let purchases  = ld('kiosk_purchases', {});
-let recentUsers= ld('kiosk_recent', []);
-let products   = ld('kiosk_products', null) || PRODUCTS.map(p=>({...p,custom:false}));
+// ── STATE (all synced via Firebase) ──
+let users      = [];
+let purchases  = {};
+let recentUsers= [];
+let products   = [];
 let currentUser=null, selectedUserName=null, editTarget=null;
+let dbReady    = false;
+
+// Firebase save helpers
+async function svUsers(){ await fbSet('users', users); }
+async function svPurchases(){ await fbSet('purchases', purchases); }
+async function svRecent(){ await fbSet('recent', recentUsers); }
+async function svProducts(){ await fbSet('products', products); }
 
 function saveRecent(name){
   recentUsers=recentUsers.filter(n=>n!==name);
   recentUsers.unshift(name);
   if(recentUsers.length>5)recentUsers=recentUsers.slice(0,5);
-  sv('kiosk_recent',recentUsers);
+  svRecent();
+  renderUsers();
+}
+
+// ── LOADING OVERLAY ──
+function showLoading(msg){
+  let el=document.getElementById('loadingOverlay');
+  if(!el){
+    el=document.createElement('div');
+    el.id='loadingOverlay';
+    el.style.cssText='position:fixed;inset:0;background:rgba(247,246,242,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2000;font-family:DM Sans,sans-serif;gap:12px';
+    el.innerHTML='<div style="width:32px;height:32px;border:3px solid #e2e0d8;border-top-color:#1a1a1a;border-radius:50%;animation:spin 0.7s linear infinite"></div><div id="loadingMsg" style="font-size:14px;color:#999"></div>';
+    document.body.appendChild(el);
+    const style=document.createElement('style');
+    style.textContent='@keyframes spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(style);
+  }
+  document.getElementById('loadingMsg').textContent=msg||'Laden...';
+  el.style.display='flex';
+}
+function hideLoading(){
+  const el=document.getElementById('loadingOverlay');
+  if(el)el.style.display='none';
+}
+
+// ── INIT: load all data from Firebase then start listeners ──
+async function initFirebase(){
+  showLoading('Verbinde mit Datenbank...');
+  try {
+    // load users
+    const fbUsers=await fbGet('users');
+    users=fbUsers||DEFAULT_USERS;
+    if(!fbUsers){ await svUsers(); }
+
+    // load products
+    const fbProducts=await fbGet('products');
+    products=fbProducts||PRODUCTS.map(p=>({...p,custom:false}));
+    if(!fbProducts){ await svProducts(); }
+
+    // load purchases
+    const fbPurchases=await fbGet('purchases');
+    purchases=fbPurchases||{};
+
+    // load recent
+    const fbRecent=await fbGet('recent');
+    recentUsers=fbRecent||[];
+
+    dbReady=true;
+    hideLoading();
+
+    // live listeners for real-time sync across devices
+    fbListen('users',val=>{ if(val){users=val; renderUsers(); if(currentUser){const u=users.find(u=>u.name===currentUser.name);if(u)currentUser=u;} if(currentUser&&currentUser.role==='Admin')renderUserMgmt(); }});
+    fbListen('products',val=>{ if(val){products=val; renderProducts(); if(currentUser&&currentUser.role==='Admin')renderAdminProducts();} });
+    fbListen('purchases',val=>{ purchases=val||{}; updateStats(); renderHistory(); if(currentUser&&currentUser.role==='Admin'){renderUserMgmt();renderSales();} });
+    fbListen('recent',val=>{ recentUsers=val||[]; renderUsers(); });
+
+    // boot UI
+    document.getElementById('currentMonth').textContent=monthLabel();
+    renderUsers();
+    renderProducts();
+    updateStats();
+    renderHistory();
+    checkReminder();
+  } catch(e){
+    hideLoading();
+    toast('Fehler beim Laden: '+e.message,'err');
+    console.error(e);
+  }
 }
 
 function fmt(n){return Math.abs(n).toFixed(2).replace('.',',')+'\u00a0€'}
@@ -633,7 +729,7 @@ function renderAdminProducts(){
       if(!newPrice||newPrice<=0){toast('Ungültiger Preis','err');return}
       products[i].name=newName;
       products[i].price=newPrice;
-      sv('kiosk_products',products);
+      svProducts();
       renderProducts(); renderAdminProducts();
       toast(newName+' wurde aktualisiert','ok');
     });
@@ -659,7 +755,7 @@ function addCustomProduct(){
   if(!priceRaw||priceRaw<=0){toast('Bitte einen gültigen Preis eingeben','err');return}
   if(products.find(p=>p.name.toLowerCase()===name.toLowerCase())){toast('Produkt bereits vorhanden','err');return}
   products.push({name,price:priceRaw,img:img||'',custom:true,addedAt:Date.now()});
-  sv('kiosk_products',products);
+  svProducts();
   document.getElementById('newProdName').value='';
   document.getElementById('newProdPrice').value='';
   document.getElementById('newProdImg').value='';
@@ -671,7 +767,7 @@ function removeProduct(idx){
   const p=products[idx];
   showConfirm('Produkt entfernen','"'+p.name+'" wirklich aus der Liste entfernen?','Ja, entfernen',()=>{
     products.splice(idx,1);
-    sv('kiosk_products',products);
+    svProducts();
     renderProducts(); renderAdminProducts();
     toast(p.name+' wurde entfernt','adm');
   });
@@ -766,7 +862,7 @@ function addProduct(p,card){
   if(!purchases[currentUser.name])purchases[currentUser.name]={};
   if(!purchases[currentUser.name][key])purchases[currentUser.name][key]=[];
   purchases[currentUser.name][key].unshift({type:'purchase',product:p.name,price:p.price,time:new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}),ts:Date.now()});
-  sv('kiosk_purchases',purchases);
+  svPurchases();
   card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'),400);
   updateStats(); renderHistory();
   if(currentUser.role==='Admin'){renderUserMgmt();renderSales()}
@@ -787,7 +883,7 @@ function doCredit(){
   if(!purchases[currentUser.name])purchases[currentUser.name]={};
   if(!purchases[currentUser.name][key])purchases[currentUser.name][key]=[];
   purchases[currentUser.name][key].unshift({type:'credit',product:'Gutschrift',price:raw,time:new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})});
-  sv('kiosk_purchases',purchases);
+  svPurchases();
   document.getElementById('creditAmount').value='';
   document.querySelectorAll('.amount-btn').forEach(b=>b.classList.remove('sel'));
   updateStats(); renderHistory();
@@ -803,7 +899,7 @@ function clearHistory(){
   if(key!==monthKey()){toast('Nur der aktuelle Monat kann geleert werden','err');return}
   showConfirm('Verlauf leeren', 'Alle Einträge für '+monthLabel(key)+' wirklich löschen?', 'Ja, leeren', ()=>{
     if(purchases[currentUser.name])purchases[currentUser.name][key]=[];
-    sv('kiosk_purchases',purchases);
+    svPurchases();
     updateStats(); renderHistory();
     if(currentUser.role==='Admin'){renderUserMgmt();renderSales()}
     toast('Verlauf geleert');
@@ -928,7 +1024,7 @@ function deletePurchase(idx,key){
     const ents2=purchases[currentUser.name]&&purchases[currentUser.name][_eKey];
     if(!ents2)return;
     ents2.splice(_eIdx,1);
-    sv('kiosk_purchases',purchases);
+    svPurchases();
     updateStats(); renderHistory();
     if(currentUser.role==='Admin'){renderUserMgmt();renderSales()}
     toast(_eName+' wurde storniert','ok');
@@ -985,9 +1081,9 @@ function deleteUser(name){
   const _uName=u.name, _uIdx=idx;
   showConfirm('Nutzer löschen', '"'+_uName+'" wirklich löschen? Alle Daten gehen verloren.', 'Ja, löschen', ()=>{
     users.splice(_uIdx,1);
-    sv('kiosk_users',users);
+    svUsers();
     delete purchases[_uName];
-    sv('kiosk_purchases',purchases);
+    svPurchases();
     renderUsers(); renderUserMgmt(); renderSales();
     toast(_uName+' wurde gelöscht','adm');
   });
@@ -999,7 +1095,7 @@ function toggleAdmin(name){
   if(!u)return;
   const wasAdmin=u.role==='Admin';
   u.role=wasAdmin?'':'Admin';
-  sv('kiosk_users',users);
+  svUsers();
   renderUsers(); renderUserMgmt();
   toast(name+(wasAdmin?' ist kein Admin mehr':' ist jetzt Admin'),'adm');
 }
@@ -1029,7 +1125,7 @@ function saveEditBalance(){
   } else {
     purchases[editTarget][key].unshift({type:'admin-debit',product:'Admin-Korrektur',price:Math.abs(diff),time:new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})});
   }
-  sv('kiosk_purchases',purchases);
+  svPurchases();
   closeEditModal();
   renderUserMgmt(); renderSales(); updateStats(); renderHistory();
   toast('Guthaben von '+editTarget+' angepasst','adm');
@@ -1127,7 +1223,7 @@ function doRegister(){
   if(pin.length!==4||!/^\d{4}$/.test(pin)){toast('PIN muss 4 Ziffern sein','err');return}
   if(users.find(u=>u.name.toLowerCase()===name.toLowerCase())){toast('Name bereits vergeben','err');return}
   users.push({name,initials:mkInits(name),role:'',pin});
-  sv('kiosk_users',users);
+  svUsers();
   document.getElementById('regName').value='';
   document.getElementById('regPin').value='';
   document.getElementById('registerForm').classList.remove('open');
@@ -1153,12 +1249,8 @@ document.addEventListener('keydown',e=>{
 document.getElementById('editModal').addEventListener('click',function(e){if(e.target===this)closeEditModal()});
 
 // init
-document.getElementById('currentMonth').textContent=monthLabel();
-renderUsers();
-renderProducts();
-updateStats();
-renderHistory();
-checkReminder();
+// Boot handled by initFirebase()
+initFirebase();
 
 // ── CONFIRM MODAL (replaces browser confirm()) ──
 let confirmCallback=null;
@@ -1208,7 +1300,7 @@ function savePinChange(){
   if(!/^\d{4}$/.test(newPin)){toast('Neue PIN muss 4 Ziffern sein','err');return}
   if(newPin!==confirmPin){toast('PINs stimmen nicht überein','err');return}
   u.pin=newPin;
-  sv('kiosk_users',users);
+  svUsers();
   closePinModal();
   if(currentUser.role==='Admin')renderUserMgmt();
   toast('PIN für '+pinTargetName+' geändert','ok');
