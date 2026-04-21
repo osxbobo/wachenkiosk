@@ -346,10 +346,14 @@
 
   <!-- ADMIN PANEL (full width) -->
   <div class="admin-panel" id="adminPanel" style="display:none">
-    <div class="admin-panel-title">
-      <div class="card-label" style="margin:0">Admin-Panel</div>
-      <span class="admin-chip">Admin</span>
-    </div>
+    <button onclick="toggleAdminPanel()" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;padding:0;font-family:DM Sans,sans-serif;margin-bottom:0">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="card-label" style="margin:0">Admin-Panel</div>
+        <span class="admin-chip">Admin</span>
+      </div>
+      <span id="adminPanelArrow" style="font-size:16px;color:var(--admin-fg);transition:transform .25s">▾</span>
+    </button>
+    <div id="adminPanelBody" style="display:none;margin-top:16px">
     <div class="tab-bar">
       <button class="tab-btn active" onclick="switchTab('users',this)">Nutzerverwaltung</button>
       <button class="tab-btn" onclick="switchTab('sales',this)">Verkaufsübersicht</button>
@@ -381,6 +385,7 @@
       <!-- Product list -->
       <div id="adminProductList"></div>
     </div>
+    </div><!-- /adminPanelBody -->
   </div>
 
   <!-- ── PRODUCTS (full width) ── -->
@@ -1340,6 +1345,14 @@ function savePinChange(){
   toast('PIN für '+pinTargetName+' geändert','ok');
 }
 document.getElementById('pinModal').addEventListener('click',function(e){if(e.target===this)closePinModal()});
+
+function toggleAdminPanel(){
+  const body=document.getElementById('adminPanelBody');
+  const arrow=document.getElementById('adminPanelArrow');
+  const open=body.style.display==='none'||body.style.display==='';
+  body.style.display=open?'block':'none';
+  arrow.style.transform=open?'rotate(180deg)':'rotate(0deg)';
+}
 
 // ── AUSVERKAUFT ──
 function toggleSoldOut(idx){
