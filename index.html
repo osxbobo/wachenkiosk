@@ -446,11 +446,10 @@
 
 <div class="toast" id="toast"></div>
 
-<script type="module">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
 // ── FIREBASE SETUP ──
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getDatabase, ref, set, get, onValue, update, remove, push } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-
 const firebaseConfig = {
   apiKey: "AIzaSyCJFrgTCFutsiTuskFO3IAcmfc5XFc8fHA",
   authDomain: "wachenkiosk-80af0.firebaseapp.com",
@@ -461,15 +460,15 @@ const firebaseConfig = {
   appId: "1:668296529992:web:9f65b3b127abc12640707d"
 };
 
-const app = initializeApp(firebaseConfig);
-const db  = getDatabase(app);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
 // ── Firebase helpers ──
-async function fbGet(path){ const s=await get(ref(db,path)); return s.exists()?s.val():null; }
-async function fbSet(path,val){ await set(ref(db,path),val); }
-async function fbUpdate(path,val){ await update(ref(db,path),val); }
-async function fbRemove(path){ await remove(ref(db,path)); }
-function fbListen(path,cb){ onValue(ref(db,path),s=>cb(s.exists()?s.val():null)); }
+async function fbGet(path){ const s=await db.ref(path).get(); return s.exists()?s.val():null; }
+async function fbSet(path,val){ await db.ref(path).set(val); }
+async function fbUpdate(path,val){ await db.ref(path).update(val); }
+async function fbRemove(path){ await db.ref(path).remove(); }
+function fbListen(path,cb){ db.ref(path).on('value',s=>cb(s.exists()?s.val():null)); }
 
 const PRODUCTS=[
   {name:'Airwaves',price:2.00,img:'https://www.bestinfood.shop/media/image/product/13012/lg/wrigley-airwaves-cool-cassis-kaugummi-12x-50-dragees-dose~2.webp'},
