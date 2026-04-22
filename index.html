@@ -218,6 +218,17 @@
 
     .history-month-sel{width:100%;height:36px;border:.5px solid var(--border);border-radius:var(--r-sm);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 12px;color:var(--text);outline:none}
     .history-month-sel:focus{border-color:var(--accent)}
+    /* announcements */
+    .announcement-card{border-radius:var(--r-lg);padding:14px 18px;margin-bottom:10px;border:.5px solid var(--blue-border);background:var(--blue-bg);display:flex;align-items:flex-start;gap:12px}
+    .announcement-card.broadcast{border-color:var(--warn-border);background:var(--warn-bg)}
+    .announcement-icon{font-size:20px;flex-shrink:0}
+    .announcement-body{flex:1;min-width:0}
+    .announcement-title{font-size:14px;font-weight:600;color:var(--blue-fg);margin-bottom:3px}
+    .announcement-card.broadcast .announcement-title{color:var(--warn-fg)}
+    .announcement-text{font-size:13px;color:var(--text);line-height:1.5}
+    .announcement-meta{font-size:11px;color:var(--hint);margin-top:4px}
+    .announcement-close{background:none;border:none;font-size:16px;cursor:pointer;opacity:.5;flex-shrink:0;padding:0}
+    .announcement-close:hover{opacity:1}
     /* ── NACHRICHTEN ── */
     .msg-thread{border:.5px solid var(--border);border-radius:var(--r-md);overflow:hidden;margin-bottom:10px}
     .msg-thread-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg);cursor:pointer;gap:8px}
@@ -265,6 +276,10 @@
     <span class="logged-in-name" id="loggedInBarName">–</span>
     <div class="bar-actions">
       <span class="admin-badge" id="adminBadge" style="display:none">ADMIN</span>
+      <button class="logout-btn" id="msgBarBtn" onclick="scrollToMessages()" style="background:rgba(255,255,255,.1);position:relative;padding:5px 10px" title="Nachrichten">
+        ✉️
+        <span id="msgBarBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--err-fg);color:white;font-size:9px;font-weight:700;border-radius:20px;padding:1px 5px;line-height:1.4">0</span>
+      </button>
       <button class="logout-btn" onclick="openPinModal(currentUser.name)" style="background:rgba(255,255,255,.1)">PIN ändern</button>
       <button class="logout-btn" onclick="logout()">Abmelden</button>
     </div>
@@ -358,7 +373,7 @@
           <option value="">Monat wählen...</option>
         </select>
       </div>
-      <div id="historyList"><div class="empty-state">Bitte zuerst anmelden.</div></div>
+      <div id="historyList" style="max-height:320px;overflow-y:auto;scrollbar-width:thin"><div class="empty-state">Bitte zuerst anmelden.</div></div>
     </div>
 
   </div>
@@ -399,9 +414,12 @@
     <div class="tab-panel" id="tab-sales">
       <div class="sales-month-selector">
         <select id="salesMonthSelect" onchange="renderSales()"></select>
+        <button class="btn btn-blue btn-sm" onclick="exportCSV()" style="flex-shrink:0;white-space:nowrap">⬇ CSV Export</button>
       </div>
       <div class="sales-stats" id="salesStats"></div>
       <div id="salesList"></div>
+      <!-- Article breakdown -->
+      <div id="salesArticles" style="margin-top:16px"></div>
     </div>
     <div class="tab-panel" id="tab-products">
       <!-- Add product form -->
@@ -420,10 +438,36 @@
       <div id="adminProductList"></div>
     </div>
     <div class="tab-panel" id="tab-messages">
+      <!-- New message to user -->
+      <div style="background:var(--bg);border-radius:var(--r-md);padding:14px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Nachricht an Nutzer</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <select id="adminMsgTarget" style="height:40px;border:.5px solid var(--border);border-radius:var(--r-sm);background:var(--surface);font-family:DM Sans,sans-serif;font-size:13px;padding:0 12px;color:var(--text);outline:none">
+            <option value="">Nutzer wählen...</option>
+          </select>
+          <textarea id="adminMsgText" placeholder="Nachricht eingeben..." style="width:100%;height:70px;border:.5px solid var(--border);border-radius:var(--r-sm);background:var(--surface);font-family:DM Sans,sans-serif;font-size:13px;padding:10px 12px;color:var(--text);outline:none;resize:none"></textarea>
+          <button class="btn btn-admin btn-full" onclick="sendAdminMsg()">Senden</button>
+        </div>
+      </div>
+      <!-- Broadcast to all -->
+      <div style="background:var(--warn-bg);border:.5px solid var(--warn-border);border-radius:var(--r-md);padding:14px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--warn-fg);margin-bottom:10px">📢 Info an alle senden</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <input class="text-input" id="broadcastTitle" placeholder="Titel (z.B. Angebot diese Woche)" autocomplete="off"/>
+          <textarea id="broadcastText" placeholder="Nachricht an alle Nutzer..." style="width:100%;height:70px;border:.5px solid var(--warn-border);border-radius:var(--r-sm);background:var(--surface);font-family:DM Sans,sans-serif;font-size:13px;padding:10px 12px;color:var(--text);outline:none;resize:none"></textarea>
+          <button class="btn btn-full" style="background:var(--warn-fg);color:white;height:44px;border:none;border-radius:var(--r-sm);font-family:DM Sans,sans-serif;font-size:14px;font-weight:500;cursor:pointer" onclick="sendBroadcast()">An alle senden</button>
+        </div>
+        <div style="font-size:11px;color:var(--warn-fg);margin-top:8px;opacity:.8">Alle eingeloggten Nutzer sehen diese Meldung sofort.</div>
+      </div>
+      <!-- Inbox -->
+      <div style="font-size:12px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Eingehende Nachrichten</div>
       <div id="adminMsgList"><div class="empty-state" style="padding:20px 0">Keine Nachrichten vorhanden.</div></div>
     </div>
     </div><!-- /adminPanelBody -->
   </div>
+
+  <!-- ── ANNOUNCEMENTS (visible to all logged-in users) ── -->
+  <div id="announcementsArea" style="display:none;margin-bottom:14px"></div>
 
   <!-- ── PRODUCTS (full width) ── -->
   <div class="section-header">
@@ -630,8 +674,9 @@ async function initFirebase(){
     // live listeners for real-time sync across devices
     fbListen('users',val=>{ if(val){users=val; renderUsers(); if(currentUser){const u=users.find(u=>u.name===currentUser.name);if(u)currentUser=u;} if(currentUser&&currentUser.role==='Admin')renderUserMgmt(); }});
     fbListen('products',val=>{ if(val){products=val; renderProducts(); if(currentUser&&currentUser.role==='Admin')renderAdminProducts();} });
-    fbListen('purchases',val=>{ purchases=val||{}; updateStats(); renderHistory(); if(currentUser&&currentUser.role==='Admin'){renderUserMgmt();renderSales();} });
+    fbListen('purchases',val=>{ purchases=val||{}; updateStats(); renderHistory(); if(currentUser&&currentUser.role==='Admin'){renderUserMgmt();renderSales();} if(currentUser&&currentUser.role!=='Admin'){updateUserMsgBadge();} });
     fbListen('recent',val=>{ recentUsers=val||[]; renderUsers(); });
+    fbListen('announcements',()=>{ if(currentUser)renderAnnouncements(); updateUserMsgBadge(); });
 
     // boot UI
     document.getElementById('currentMonth').textContent=monthLabel();
@@ -640,6 +685,15 @@ async function initFirebase(){
     updateStats();
     renderHistory();
     checkReminder();
+    // auto-login if session saved
+    const saved=localStorage.getItem('kiosk_session');
+    if(saved){
+      try{
+        const {name}=JSON.parse(saved);
+        const user=users.find(u=>u.name===name);
+        if(user) finishLogin(user);
+      }catch(e){localStorage.removeItem('kiosk_session');}
+    }
   } catch(e){
     hideLoading();
     toast('Fehler beim Laden: '+e.message,'err');
@@ -898,6 +952,9 @@ function finishLogin(user){
   checkReminder();
   updateStats(); renderHistory();
   renderUserMessages();
+  updateUserMsgBadge();
+  renderAnnouncements();
+  localStorage.setItem('kiosk_session',JSON.stringify({name:currentUser.name}));
   toast('Willkommen, '+currentUser.name+'!','ok');
 }
 
@@ -930,6 +987,7 @@ function logout(){
   document.getElementById('statsRow').style.display='none';
   document.getElementById('detailRow').style.display='none';
   document.getElementById('loginCard').style.display='';
+  localStorage.removeItem('kiosk_session');
   renderUsers();
   toast('Abgemeldet');
 }
@@ -940,12 +998,14 @@ function addProduct(p,card){
   const key=monthKey();
   if(!purchases[currentUser.name])purchases[currentUser.name]={};
   if(!purchases[currentUser.name][key])purchases[currentUser.name][key]=[];
-  purchases[currentUser.name][key].unshift({type:'purchase',product:p.name,price:p.price,time:new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}),ts:Date.now()});
+  const finalP=p.discount>0?parseFloat((p.price*(1-p.discount/100)).toFixed(2)):p.price;
+  const prodName=p.discount>0?p.name+' (-'+p.discount+'%)':p.name;
+  purchases[currentUser.name][key].unshift({type:'purchase',product:prodName,price:finalP,time:new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}),ts:Date.now()});
   svPurchases();
   card.classList.add('flash'); setTimeout(()=>card.classList.remove('flash'),400);
   updateStats(); renderHistory();
   if(currentUser.role==='Admin'){renderUserMgmt();renderSales()}
-  toast(p.name+' für '+fmt(p.price)+' eingetragen','ok');
+  toast(prodName+' für '+fmt(finalP)+' eingetragen','ok');
 }
 
 // gutschrift
@@ -1042,7 +1102,7 @@ function renderHistory(){
   const isCurrentMonth=key===monthKey();
   const entries=(purchases[currentUser.name]&&purchases[currentUser.name][key])||[];
   if(!entries.length){list.innerHTML='<div class="empty-state">Keine Einträge in diesem Monat.</div>';cb.style.display='none';return}
-  cb.style.display=isCurrentMonth?'':'none';
+  cb.style.display=(isCurrentMonth&&currentUser&&currentUser.role==='Admin')?'':'none';
   list.innerHTML='';
   // month summary header
   const{spent,credited}=userMonthStats(currentUser.name,key);
@@ -1058,7 +1118,7 @@ function renderHistory(){
     const isCr=e.type==='credit'||e.type==='admin-credit';
     const isAdm=e.type==='admin-credit'||e.type==='admin-debit';
     const isPurchase=e.type==='purchase';
-    const canDelete=isPurchase&&isCurrentMonth&&e.ts&&(now-e.ts)<86400000;
+    const canDelete=isPurchase&&isCurrentMonth&&e.ts&&(now-e.ts)<600000;
     const item=document.createElement('div');
     item.className='history-item';
     item.style.gap='8px';
@@ -1070,7 +1130,7 @@ function renderHistory(){
     hn.textContent=(isCr?'↑ ':isAdm?'⚙ ':'')+e.product;
     const ht=document.createElement('div'); ht.className='h-time';
     ht.textContent=e.time+' Uhr';
-    if(canDelete){const sp=document.createElement('span');sp.style.color='var(--ok-fg)';sp.textContent=' · stornierbar';ht.appendChild(sp);}
+    if(canDelete){const sp=document.createElement('span');sp.style.color='var(--ok-fg)';sp.textContent=' · stornierbar (10 Min.)';ht.appendChild(sp);}
     info.append(hn,ht);
     // price
     const hp=document.createElement('div');
@@ -1097,7 +1157,7 @@ function deletePurchase(idx,key){
   if(!entries)return;
   const e=entries[idx];
   if(!e||e.type!=='purchase'){toast('Nur Käufe können storniert werden','err');return}
-  if(!e.ts||(Date.now()-e.ts)>=86400000){toast('Nur Käufe der letzten 24h können storniert werden','err');return}
+  if(!e.ts||(Date.now()-e.ts)>=600000){toast('Nur Käufe der letzten 10 Minuten können storniert werden','err');return}
   const _eName=e.product, _ePrice=e.price, _eIdx=idx, _eKey=key;
   showConfirm('Kauf stornieren', _eName+' ('+fmt(_ePrice)+') wirklich entfernen?', 'Ja, stornieren', ()=>{
     const ents2=purchases[currentUser.name]&&purchases[currentUser.name][_eKey];
@@ -1236,43 +1296,137 @@ function renderSales(){
   const key=document.getElementById('salesMonthSelect').value||monthKey();
   const list=document.getElementById('salesList');
   const stats=document.getElementById('salesStats');
+  const articlesEl=document.getElementById('salesArticles');
 
   let totalSpent=0, totalCredit=0, txCount=0;
   const rows=[];
+  const articleMap={}; // name -> {count, total}
 
   users.forEach(u=>{
     const{spent,credited,entries}=userMonthStats(u.name,key);
-    const bal=spent-credited; // how much they owe this month
+    const bal=spent-credited;
     totalSpent+=spent; totalCredit+=credited; txCount+=entries.length;
     rows.push({name:u.name,spent,credited,bal,count:entries.length});
+    // collect article stats
+    entries.filter(e=>e.type==='purchase').forEach(e=>{
+      const n=e.product||'Unbekannt';
+      if(!articleMap[n])articleMap[n]={count:0,total:0};
+      articleMap[n].count++;
+      articleMap[n].total+=e.price;
+    });
   });
 
   rows.sort((a,b)=>b.spent-a.spent);
 
-  stats.innerHTML=`
-    <div class="sales-stat"><div class="sales-stat-val">${fmt(totalSpent)}</div><div class="sales-stat-lbl">Umsatz</div></div>
-    <div class="sales-stat"><div class="sales-stat-val">${fmt(totalCredit)}</div><div class="sales-stat-lbl">Eingezahlt</div></div>
-    <div class="sales-stat"><div class="sales-stat-val">${txCount}</div><div class="sales-stat-lbl">Transaktionen</div></div>`;
+  stats.innerHTML='<div class="sales-stat"><div class="sales-stat-val">'+fmt(totalSpent)+'</div><div class="sales-stat-lbl">Umsatz</div></div>'+'<div class="sales-stat"><div class="sales-stat-val">'+fmt(totalCredit)+'</div><div class="sales-stat-lbl">Eingezahlt</div></div>'+'<div class="sales-stat"><div class="sales-stat-val">'+txCount+'</div><div class="sales-stat-lbl">Transaktionen</div></div>';
 
   if(!rows.some(r=>r.count>0)){
-    list.innerHTML='<div class="empty-state">Keine Einträge in diesem Monat.</div>';return;
+    list.innerHTML='<div class="empty-state">Keine Einträge in diesem Monat.</div>';
+    if(articlesEl)articlesEl.innerHTML='';
+    return;
   }
 
+  // ── User overview ──
   list.innerHTML='';
   rows.filter(r=>r.count>0).forEach(r=>{
-    const diff=r.credited-r.spent; // positive = has credit, negative = owes money
+    const diff=r.credited-r.spent;
     const diffStr=diff>0?'+'+fmt(diff):'-'+fmt(Math.abs(diff));
     const diffClass=diff>0?'pos':diff<0?'neg':'zero';
     const row=document.createElement('div');
     row.className='sales-row';
-    row.innerHTML=`
-      <div>
-        <div class="sales-user">${r.name}</div>
-        <div class="sales-detail">${r.count} Einträge · Ausgaben: ${fmt(r.spent)} · Eingezahlt: ${fmt(r.credited)}</div>
-      </div>
-      <div class="sales-amount ${diffClass}" title="Saldo">${diffStr}</div>`;
+    row.innerHTML='<div><div class="sales-user">'+r.name+'</div><div class="sales-detail">'+r.count+' Einträge · Ausgaben: '+fmt(r.spent)+' · Eingezahlt: '+fmt(r.credited)+'</div></div><div class="sales-amount '+diffClass+'" title="Saldo">'+diffStr+'</div>';
     list.appendChild(row);
   });
+
+  // ── Article breakdown ──
+  if(!articlesEl)return;
+  const sorted=Object.entries(articleMap).sort((a,b)=>b[1].count-a[1].count);
+  if(!sorted.length){articlesEl.innerHTML='';return;}
+
+  articlesEl.innerHTML='';
+  const heading=document.createElement('div');
+  heading.style.cssText='font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:10px';
+  heading.textContent='Verkaufte Artikel';
+  articlesEl.appendChild(heading);
+
+  const table=document.createElement('table');
+  table.style.cssText='width:100%;border-collapse:collapse;font-size:13px';
+  table.innerHTML='<thead><tr>'+
+    '<th style="text-align:left;padding:6px 8px;border-bottom:.5px solid var(--border);font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)">Artikel</th>'+
+    '<th style="text-align:center;padding:6px 8px;border-bottom:.5px solid var(--border);font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)">Anzahl</th>'+
+    '<th style="text-align:right;padding:6px 8px;border-bottom:.5px solid var(--border);font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)">Umsatz</th>'+
+    '</tr></thead>';
+  const tbody=document.createElement('tbody');
+  sorted.forEach(([name,data])=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="padding:7px 8px;border-bottom:.5px solid var(--border-light)">${name}</td>`+
+      `<td style="padding:7px 8px;border-bottom:.5px solid var(--border-light);text-align:center;font-family:'DM Mono',monospace;font-weight:600">${data.count}×</td>`+
+      `<td style="padding:7px 8px;border-bottom:.5px solid var(--border-light);text-align:right;font-family:'DM Mono',monospace;color:var(--ok-fg)">${fmt(data.total)}</td>`;
+    tbody.appendChild(tr);
+  });
+  // totals row
+  const totTr=document.createElement('tr');
+  totTr.innerHTML=`<td style="padding:7px 8px;font-weight:600;font-size:12px;color:var(--muted)">Gesamt</td>`+
+    `<td style="padding:7px 8px;text-align:center;font-family:'DM Mono',monospace;font-weight:700">${sorted.reduce((s,[,d])=>s+d.count,0)}×</td>`+
+    `<td style="padding:7px 8px;text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:var(--ok-fg)">${fmt(sorted.reduce((s,[,d])=>s+d.total,0))}</td>`;
+  tbody.appendChild(totTr);
+  table.appendChild(tbody);
+  articlesEl.appendChild(table);
+}
+
+// ── CSV EXPORT ──
+function exportCSV(){
+  const key=document.getElementById('salesMonthSelect').value||monthKey();
+  const label=monthLabel(key);
+  const lines=[];
+  const sep=';';
+
+  // Header
+  lines.push(['Wachenkiosk Export',label,'','',''].join(sep));
+  lines.push([]);
+
+  // Per-user summary
+  lines.push(['Nutzer','Ausgaben (€)','Eingezahlt (€)','Saldo (€)','Transaktionen'].join(sep));
+  users.forEach(u=>{
+    const{spent,credited,entries}=userMonthStats(u.name,key);
+    if(!entries.length)return;
+    const saldo=credited-spent;
+    lines.push([u.name,spent.toFixed(2).replace('.',','),credited.toFixed(2).replace('.',','),saldo.toFixed(2).replace('.',','),entries.length].join(sep));
+  });
+  lines.push([]);
+
+  // Article breakdown
+  const articleMap={};
+  users.forEach(u=>{
+    const{entries}=userMonthStats(u.name,key);
+    entries.filter(e=>e.type==='purchase').forEach(e=>{
+      const n=e.product||'Unbekannt';
+      if(!articleMap[n])articleMap[n]={count:0,total:0};
+      articleMap[n].count++; articleMap[n].total+=e.price;
+    });
+  });
+  lines.push(['Artikel','Anzahl','Umsatz (€)'].join(sep));
+  Object.entries(articleMap).sort((a,b)=>b[1].count-a[1].count).forEach(([name,d])=>{
+    lines.push([name,d.count,d.total.toFixed(2).replace('.',',')].join(sep));
+  });
+  lines.push([]);
+
+  // Detailed transactions
+  lines.push(['Nutzer','Artikel','Preis (€)','Zeit','Typ'].join(sep));
+  users.forEach(u=>{
+    const{entries}=userMonthStats(u.name,key);
+    entries.forEach(e=>{
+      lines.push([u.name,e.product||'',e.price.toFixed(2).replace('.',','),e.time||'',e.type||''].join(sep));
+    });
+  });
+
+  const csv=String.fromCharCode(0xFEFF)+lines.map(function(l){return Array.isArray(l)?'':l;}).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='Wachenkiosk_'+key+'.csv';
+  a.click(); URL.revokeObjectURL(url);
+  toast('CSV exportiert!','ok');
 }
 
 // tab switching
@@ -1283,7 +1437,7 @@ function switchTab(id,btn){
   document.getElementById('tab-'+id).classList.add('active');
   if(id==='sales'){populateSalesMonths();renderSales()}
   if(id==='products'){renderAdminProducts()}
-  if(id==='messages'){renderAdminMessages()}
+  if(id==='messages'){renderAdminMessages();populateAdminMsgSelect();}
 }
 
 // register
@@ -1424,105 +1578,102 @@ async function sendUserMsg(){
   updateMsgBadge();
 }
 
+// ── MESSAGES HELPERS ──
+function normMsgs(val){
+  if(!val)return[];
+  if(Array.isArray(val))return val;
+  return Object.values(val);
+}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
 // User: render own messages + admin replies
 async function renderUserMessages(){
   const list=document.getElementById('msgUserList');
   if(!list||!currentUser)return;
-  const allMsgs=(await fbGet('messages'))||[];
-  const mine=allMsgs.filter(m=>m.from===currentUser.name);
+  const allMsgs=normMsgs(await fbGet('messages'));
+  const mine=allMsgs.filter(m=>m&&m.from===currentUser.name);
   if(!mine.length){list.innerHTML='';return;}
 
-  // count unread replies (replies added after last user read)
   const lastReadKey='msg_lastread_'+currentUser.name;
   const lastRead=parseInt(localStorage.getItem(lastReadKey)||'0');
-  const unreadReplies=mine.reduce((n,m)=>{
-    return n+((m.replies||[]).filter(r=>r.ts>lastRead).length);
-  },0);
+  const unreadReplies=mine.reduce((n,m)=>n+((m.replies||[]).filter(r=>r.ts>lastRead&&!r.isUser).length),0);
 
   list.innerHTML='<div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:12px 0 8px">'+
-    'Deine Nachrichten'+
-    (unreadReplies>0?'<span class="msg-badge">'+unreadReplies+' neu</span>':'')+
+    'Deine Nachrichten'+(unreadReplies>0?'<span class="msg-badge">'+unreadReplies+' neu</span>':'')+
     '</div>';
 
-  mine.slice().reverse().forEach(m=>{
+  [...mine].sort((a,b)=>b.ts-a.ts).forEach(m=>{
     const d=new Date(m.ts);
     const ts=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-    const newReplies=(m.replies||[]).filter(r=>r.ts>lastRead).length;
-    const hasReplies=m.replies&&m.replies.length>0;
+    const replies=m.replies||[];
+    const newReplies=replies.filter(r=>r.ts>lastRead&&!r.isUser).length;
+    const lastReply=replies.length?replies[replies.length-1]:null;
 
-    const wrap=document.createElement('div');
-    wrap.className='msg-thread';
+    const wrap=document.createElement('div'); wrap.className='msg-thread';
 
-    const hdr=document.createElement('div');
-    hdr.className='msg-thread-header';
+    const hdr=document.createElement('div'); hdr.className='msg-thread-header';
     if(newReplies>0){const dot=document.createElement('div');dot.className='msg-unread-dot';hdr.appendChild(dot);}
     const fromEl=document.createElement('span');fromEl.className='msg-thread-from';fromEl.textContent='Du';
     const prev=document.createElement('span');prev.className='msg-thread-preview';
-    prev.textContent=hasReplies?'Admin: '+(m.replies[m.replies.length-1].text):m.text;
-    const meta=document.createElement('span');meta.className='msg-thread-meta';
-    meta.textContent=ts+(newReplies>0?' · '+newReplies+' neu':(hasReplies?' · '+m.replies.length+' Antwort'+(m.replies.length>1?'en':''):''));
-    hdr.append(fromEl,prev,meta);
+    prev.textContent=lastReply?(lastReply.isUser?'Du: ':'Admin: ')+lastReply.text:m.text;
+    const metaEl=document.createElement('span');metaEl.className='msg-thread-meta';
+    metaEl.textContent=ts+(newReplies>0?' · '+newReplies+' neu':replies.length?' · '+replies.length+' Antwort'+(replies.length>1?'en':''):'');
+    hdr.append(fromEl,prev,metaEl);
 
     const body=document.createElement('div');
     body.className='msg-body'+(newReplies>0?' open':'');
-    const bubbles=document.createElement('div');
-    bubbles.className='msg-bubble-wrap';
 
-    // original message
+    const bubbles=document.createElement('div'); bubbles.className='msg-bubble-wrap';
     const orig=document.createElement('div');
-    orig.innerHTML='<div class="msg-bubble user">'+m.text+'<div class="msg-bubble-meta">'+ts+'</div></div>';
+    orig.innerHTML='<div class="msg-bubble user">'+escHtml(m.text)+'<div class="msg-bubble-meta">'+ts+'</div></div>';
     bubbles.appendChild(orig);
-
-    // all replies
-    (m.replies||[]).forEach(r=>{
+    replies.forEach(r=>{
       const rd=new Date(r.ts);
       const rts=rd.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})+' '+rd.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-      const isNew=r.ts>lastRead;
-      const isUserReply=r.isUser;
+      const isNew=r.ts>lastRead&&!r.isUser;
       const rb=document.createElement('div');
-      rb.innerHTML='<div class="msg-bubble '+(isUserReply?'user':'admin')+'"'+(isNew&&!isUserReply?' style="border-color:var(--admin-fg)"':'')+'>'+
-        '<strong>'+(isUserReply?r.from:'Admin '+r.from)+':</strong> '+r.text+
-        '<div class="msg-bubble-meta">'+rts+(isNew&&!isUserReply?' · <span style="color:var(--admin-fg);font-weight:600">Neu</span>':'')+'</div></div>';
+      rb.innerHTML='<div class="msg-bubble '+(r.isUser?'user':'admin')+'"'+(isNew?' style="border-color:var(--admin-fg)"':'')+'>'+
+        '<strong>'+(r.isUser?escHtml(r.from):'Admin '+escHtml(r.from))+':</strong> '+escHtml(r.text)+
+        '<div class="msg-bubble-meta">'+rts+(isNew?' · <span style="color:var(--admin-fg);font-weight:600">Neu</span>':'')+'</div></div>';
       bubbles.appendChild(rb);
     });
-
     body.appendChild(bubbles);
 
-    // Reply row — always visible when thread is open
-    const replyRow=document.createElement('div');
-    replyRow.className='msg-reply-row';
-    const replyInput=document.createElement('input');
-    replyInput.className='msg-reply-input';
-    replyInput.placeholder='Nachricht hinzufügen...';
-    replyInput.type='text';
-    replyInput.autocomplete='off';
-    const replyBtn=document.createElement('button');
-    replyBtn.className='btn btn-dark btn-sm';
-    replyBtn.textContent='Senden';
-    replyBtn.addEventListener('click',async()=>{
-      const text=replyInput.value.trim();
-      if(!text)return;
-      replyBtn.disabled=true;
-      replyBtn.textContent='...';
+    // reply + delete row
+    const replyRow=document.createElement('div'); replyRow.className='msg-reply-row';
+    const ri=document.createElement('input'); ri.className='msg-reply-input';
+    ri.placeholder='Antworten...'; ri.type='text'; ri.autocomplete='off';
+    const rb2=document.createElement('button'); rb2.className='btn btn-dark btn-sm'; rb2.textContent='Senden';
+    const delBtn=document.createElement('button'); delBtn.className='btn btn-danger btn-sm'; delBtn.textContent='Löschen';
+
+    rb2.addEventListener('click',async()=>{
+      const txt=ri.value.trim(); if(!txt)return;
+      rb2.disabled=true; rb2.textContent='...';
       try{
-        const allMsgs2=(await fbGet('messages'))||[];
-        // find by ts+from (robust, works even without id)
-        const idx=allMsgs2.findIndex(x=>x.ts===m.ts&&x.from===m.from);
-        if(idx===-1){toast('Nachricht nicht gefunden','err');return;}
-        if(!allMsgs2[idx].replies)allMsgs2[idx].replies=[];
-        allMsgs2[idx].replies.push({from:currentUser.name,text,ts:Date.now(),isUser:true});
-        allMsgs2[idx].readByAdmin=false;
-        await fbSet('messages',allMsgs2);
-        replyInput.value='';
-        toast('Gesendet!','ok');
+        const fresh=normMsgs(await fbGet('messages'));
+        const i=fresh.findIndex(x=>x&&x.ts===m.ts&&x.from===m.from);
+        if(i===-1){toast('Nicht gefunden','err');return;}
+        if(!fresh[i].replies)fresh[i].replies=[];
+        fresh[i].replies.push({from:currentUser.name,text:txt,ts:Date.now(),isUser:true});
+        fresh[i].readByAdmin=false;
+        await fbSet('messages',fresh);
+        ri.value=''; toast('Gesendet!','ok');
         renderUserMessages();
-      }finally{
-        replyBtn.disabled=false;
-        replyBtn.textContent='Senden';
-      }
+      }finally{rb2.disabled=false;rb2.textContent='Senden';}
     });
-    replyInput.addEventListener('keydown',e=>{if(e.key==='Enter')replyBtn.click();});
-    replyRow.append(replyInput,replyBtn);
+    ri.addEventListener('keydown',e=>{if(e.key==='Enter')rb2.click();});
+
+    delBtn.addEventListener('click',()=>{
+      showConfirm('Nachricht löschen','Diese Nachricht wirklich löschen?','Ja, löschen',async()=>{
+        const fresh=normMsgs(await fbGet('messages'));
+        const i=fresh.findIndex(x=>x&&x.ts===m.ts&&x.from===m.from);
+        if(i!==-1){fresh.splice(i,1); await fbSet('messages',fresh);}
+        toast('Nachricht gelöscht','ok');
+        renderUserMessages();
+      });
+    });
+
+    replyRow.append(ri,rb2,delBtn);
     body.appendChild(replyRow);
 
     hdr.addEventListener('click',()=>{
@@ -1532,103 +1683,88 @@ async function renderUserMessages(){
     wrap.append(hdr,body);
     list.appendChild(wrap);
   });
-
-  // mark as read now
   localStorage.setItem(lastReadKey,String(Date.now()));
+  updateUserMsgBadge();
 }
 
-// Admin: update badge count on tab
+// Admin: update badge
 async function updateMsgBadge(){
   const tab=document.getElementById('msgAdminTab');
   if(!tab)return;
-  const msgs=(await fbGet('messages'))||[];
-  const unread=msgs.filter(m=>!m.readByAdmin).length;
-  const base='Nachrichten';
-  tab.innerHTML=unread>0?base+'<span class="msg-badge">'+unread+'</span>':base;
+  const msgs=normMsgs(await fbGet('messages'));
+  const unread=msgs.filter(m=>m&&!m.readByAdmin).length;
+  tab.innerHTML='Nachrichten'+(unread>0?'<span class="msg-badge">'+unread+'</span>':'');
 }
 
 // Admin: render all messages
 async function renderAdminMessages(){
   const list=document.getElementById('adminMsgList');
   if(!list)return;
-  const msgs=(await fbGet('messages'))||[];
+  const msgs=normMsgs(await fbGet('messages'));
   if(!msgs.length){
     list.innerHTML='<div class="empty-state" style="padding:20px 0">Keine Nachrichten vorhanden.</div>';
     return;
   }
-  // mark all as read
-  const updated=msgs.map(m=>({...m,readByAdmin:true}));
-  await fbSet('messages',updated);
+  await fbSet('messages',msgs.map(m=>({...m,readByAdmin:true})));
   updateMsgBadge();
   list.innerHTML='';
-  [...msgs].slice().reverse().forEach((m,ri)=>{
-    const realIdx=msgs.length-1-ri;
+  [...msgs].sort((a,b)=>b.ts-a.ts).forEach(m=>{
     const d=new Date(m.ts);
     const ts=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-    const wrap=document.createElement('div');
-    wrap.className='msg-thread';
-    // header
-    const hdr=document.createElement('div');
-    hdr.className='msg-thread-header';
+    const wrap=document.createElement('div'); wrap.className='msg-thread';
+
+    const hdr=document.createElement('div'); hdr.className='msg-thread-header';
     if(!m.readByAdmin){const dot=document.createElement('div');dot.className='msg-unread-dot';hdr.appendChild(dot);}
-    hdr.innerHTML+='<span class="msg-thread-from">'+m.from+'</span>'+
-      '<span class="msg-thread-preview">'+m.text+'</span>'+
+    hdr.innerHTML+='<span class="msg-thread-from">'+escHtml(m.from)+'</span>'+
+      '<span class="msg-thread-preview">'+escHtml(m.text)+'</span>'+
       '<span class="msg-thread-meta">'+ts+'</span>';
-    // body
-    const body=document.createElement('div');
-    body.className='msg-body';
-    const bubbles=document.createElement('div');
-    bubbles.className='msg-bubble-wrap';
-    // original
+
+    const body=document.createElement('div'); body.className='msg-body';
+    const bubbles=document.createElement('div'); bubbles.className='msg-bubble-wrap';
     const orig=document.createElement('div');
-    orig.innerHTML='<div class="msg-bubble user"><strong>'+m.from+':</strong> '+m.text+'<div class="msg-bubble-meta">'+ts+'</div></div>';
+    orig.innerHTML='<div class="msg-bubble user"><strong>'+escHtml(m.from)+':</strong> '+escHtml(m.text)+'<div class="msg-bubble-meta">'+ts+'</div></div>';
     bubbles.appendChild(orig);
-    // replies
     (m.replies||[]).forEach(r=>{
       const rd=new Date(r.ts);
       const rts=rd.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})+' '+rd.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
       const rb=document.createElement('div');
-      const bubbleClass=r.isUser?'user':'admin';
-      rb.innerHTML='<div class="msg-bubble '+bubbleClass+'"><strong>'+(r.isUser?r.from:'Admin '+r.from)+':</strong> '+r.text+'<div class="msg-bubble-meta">'+rts+'</div></div>';
+      rb.innerHTML='<div class="msg-bubble '+(r.isUser?'user':'admin')+'"><strong>'+(r.isUser?escHtml(r.from):'Admin '+escHtml(r.from))+':</strong> '+escHtml(r.text)+'<div class="msg-bubble-meta">'+rts+'</div></div>';
       bubbles.appendChild(rb);
     });
     body.appendChild(bubbles);
-    // reply row
-    const replyRow=document.createElement('div');
-    replyRow.className='msg-reply-row';
-    const replyInput=document.createElement('input');
-    replyInput.className='msg-reply-input';
-    replyInput.placeholder='Antwort eingeben...';
-    replyInput.type='text';
-    replyInput.autocomplete='off';
-    const replyBtn=document.createElement('button');
-    replyBtn.className='btn btn-admin btn-sm';
-    replyBtn.textContent='Antworten';
+
+    const replyRow=document.createElement('div'); replyRow.className='msg-reply-row';
+    const replyInput=document.createElement('input'); replyInput.className='msg-reply-input';
+    replyInput.placeholder='Antwort eingeben...'; replyInput.type='text'; replyInput.autocomplete='off';
+    const replyBtn=document.createElement('button'); replyBtn.className='btn btn-admin btn-sm'; replyBtn.textContent='Antworten';
+    const delBtn=document.createElement('button'); delBtn.className='btn btn-danger btn-sm'; delBtn.textContent='Löschen';
+
     replyBtn.addEventListener('click',async()=>{
-      const text=replyInput.value.trim();
-      if(!text)return;
-      const allMsgs=(await fbGet('messages'))||[];
-      if(!allMsgs[realIdx].replies)allMsgs[realIdx].replies=[];
-      allMsgs[realIdx].replies.push({from:currentUser.name,text,ts:Date.now()});
-      await fbSet('messages',allMsgs);
-      replyInput.value='';
-      toast('Antwort gesendet','ok');
-      renderAdminMessages();
+      const txt=replyInput.value.trim(); if(!txt)return;
+      replyBtn.disabled=true; replyBtn.textContent='...';
+      try{
+        const fresh=normMsgs(await fbGet('messages'));
+        const i=fresh.findIndex(x=>x&&x.ts===m.ts&&x.from===m.from);
+        if(i===-1){toast('Nicht gefunden','err');return;}
+        if(!fresh[i].replies)fresh[i].replies=[];
+        fresh[i].replies.push({from:currentUser.name,text:txt,ts:Date.now(),isUser:false});
+        await fbSet('messages',fresh);
+        replyInput.value=''; toast('Antwort gesendet','ok');
+        renderAdminMessages();
+      }finally{replyBtn.disabled=false;replyBtn.textContent='Antworten';}
     });
     replyInput.addEventListener('keydown',e=>{if(e.key==='Enter')replyBtn.click();});
-    const delBtn=document.createElement('button');
-    delBtn.className='btn btn-danger btn-sm';
-    delBtn.textContent='Löschen';
+
     delBtn.addEventListener('click',()=>{
       showConfirm('Nachricht löschen','Nachricht von "'+m.from+'" wirklich löschen?','Ja, löschen',async()=>{
-        const allMsgs=(await fbGet('messages'))||[];
-        allMsgs.splice(realIdx,1);
-        await fbSet('messages',allMsgs);
+        const fresh=normMsgs(await fbGet('messages'));
+        const i=fresh.findIndex(x=>x&&x.ts===m.ts&&x.from===m.from);
+        if(i!==-1){fresh.splice(i,1); await fbSet('messages',fresh);}
         toast('Nachricht gelöscht','adm');
-        renderAdminMessages();
-        updateMsgBadge();
+        renderAdminMessages(); updateMsgBadge();
       });
     });
+
     replyRow.append(replyInput,replyBtn,delBtn);
     body.appendChild(replyRow);
     hdr.addEventListener('click',()=>body.classList.toggle('open'));
@@ -1667,6 +1803,141 @@ function setDiscount(idx){
   renderProducts();
   renderAdminProducts();
   toast(pct>0?p.name+': -'+pct+'% Rabatt aktiv':p.name+': Rabatt entfernt','ok');
+}
+// ── USER MESSAGE BADGE ──
+async function updateUserMsgBadge(){
+  if(!currentUser||currentUser.role==='Admin')return;
+  const lastReadKey='msg_lastread_'+currentUser.name;
+  const lastRead=parseInt(localStorage.getItem(lastReadKey)||'0');
+  const dismissKey='dismissed_announcements_'+currentUser.name;
+  const dismissed=JSON.parse(localStorage.getItem(dismissKey)||'[]');
+  const allMsgs=normMsgs(await fbGet('messages'));
+
+  // 1) unread admin replies to my messages
+  const mine=allMsgs.filter(m=>m&&m.from===currentUser.name);
+  const unreadReplies=mine.reduce((n,m)=>n+((m.replies||[]).filter(r=>r.ts>lastRead&&!r.isUser).length),0);
+
+  // 2) unread direct admin messages to me
+  const directToMe=allMsgs.filter(m=>m&&m.from==='__admin__'&&m.to===currentUser.name&&!dismissed.includes('dm_'+m.ts));
+
+  // 3) unread announcements
+  const announcements=normMsgs(await fbGet('announcements'));
+  const unreadAnnouncements=announcements.filter(a=>a&&!dismissed.includes(a.id));
+
+  const total=unreadReplies+directToMe.length+unreadAnnouncements.length;
+  const badge=document.getElementById('msgBarBadge');
+  const btn=document.getElementById('msgBarBtn');
+  if(badge){badge.style.display=total>0?'inline':'none';badge.textContent=total;}
+  if(btn){btn.style.opacity=total>0?'1':'0.75';}
+}
+
+function scrollToMessages(){
+  const card=document.getElementById('msgUserCard');
+  if(card){card.scrollIntoView({behavior:'smooth',block:'start'});}
+}
+// ── ADMIN: SEND MESSAGE TO USER ──
+async function sendAdminMsg(){
+  const target=document.getElementById('adminMsgTarget').value;
+  const text=document.getElementById('adminMsgText').value.trim();
+  if(!target){toast('Bitte einen Nutzer wählen','err');return;}
+  if(!text){toast('Bitte Text eingeben','err');return;}
+  // create a message from admin in user's inbox (as a direct message)
+  const msgs=normMsgs(await fbGet('messages'));
+  msgs.push({
+    id:'adm_'+Date.now(),
+    from:'__admin__',
+    to:target,
+    adminFrom:currentUser.name,
+    text,
+    ts:Date.now(),
+    readByAdmin:true,
+    readByUser:false,
+    replies:[]
+  });
+  await fbSet('messages',msgs);
+  document.getElementById('adminMsgText').value='';
+  document.getElementById('adminMsgTarget').value='';
+  toast('Nachricht an '+target+' gesendet','adm');
+  renderAdminMessages();
+}
+
+// ── ADMIN: BROADCAST TO ALL ──
+async function sendBroadcast(){
+  const title=document.getElementById('broadcastTitle').value.trim();
+  const text=document.getElementById('broadcastText').value.trim();
+  if(!text){toast('Bitte Text eingeben','err');return;}
+  const announcements=normMsgs(await fbGet('announcements'));
+  announcements.push({
+    id:'bc_'+Date.now(),
+    title:title||'Info vom Admin',
+    text,
+    from:currentUser.name,
+    ts:Date.now()
+  });
+  await fbSet('announcements',announcements);
+  document.getElementById('broadcastTitle').value='';
+  document.getElementById('broadcastText').value='';
+  toast('Info an alle gesendet!','adm');
+  renderAnnouncements();
+}
+
+// ── RENDER ANNOUNCEMENTS (all users) ──
+async function renderAnnouncements(){
+  const area=document.getElementById('announcementsArea');
+  if(!area||!currentUser)return;
+  const dismissKey='dismissed_announcements_'+currentUser.name;
+  const dismissed=JSON.parse(localStorage.getItem(dismissKey)||'[]');
+  const all=normMsgs(await fbGet('announcements'));
+  const msgs=normMsgs(await fbGet('messages'));
+  const directToMe=msgs.filter(m=>m&&m.from==='__admin__'&&m.to===currentUser.name&&!dismissed.includes('dm_'+m.ts));
+  const visible=all.filter(a=>a&&!dismissed.includes(a.id));
+  if(!visible.length&&!directToMe.length){area.style.display='none';return;}
+  area.style.display='';
+  area.innerHTML='';
+  function makeCard(icon,title,text,meta,dismissId,isBroadcast){
+    const card=document.createElement('div');
+    card.className='announcement-card'+(isBroadcast?' broadcast':'');
+    const iconEl=document.createElement('div');iconEl.className='announcement-icon';iconEl.textContent=icon;
+    const body=document.createElement('div');body.className='announcement-body';
+    const titleEl=document.createElement('div');titleEl.className='announcement-title';titleEl.textContent=title;
+    const textEl=document.createElement('div');textEl.className='announcement-text';textEl.textContent=text;
+    const metaEl=document.createElement('div');metaEl.className='announcement-meta';metaEl.textContent=meta;
+    body.append(titleEl,textEl,metaEl);
+    const closeBtn=document.createElement('button');closeBtn.className='announcement-close';closeBtn.textContent='×';
+    closeBtn.addEventListener('click',()=>dismissAnnouncement(dismissId));
+    card.append(iconEl,body,closeBtn);
+    return card;
+  }
+  directToMe.forEach(m=>{
+    const d=new Date(m.ts);
+    const meta=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+    area.appendChild(makeCard('✉️','Nachricht von Admin '+m.adminFrom,m.text,meta,'dm_'+m.ts,false));
+  });
+  visible.forEach(a=>{
+    const meta='Von '+a.from+' · '+new Date(a.ts).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+    area.appendChild(makeCard('📢',a.title,a.text,meta,a.id,true));
+  });
+}
+
+function dismissAnnouncement(id){
+  if(!currentUser)return;
+  const key='dismissed_announcements_'+currentUser.name;
+  const dismissed=JSON.parse(localStorage.getItem(key)||'[]');
+  if(!dismissed.includes(id))dismissed.push(id);
+  localStorage.setItem(key,JSON.stringify(dismissed));
+  renderAnnouncements();
+}
+
+// populate admin msg user select
+function populateAdminMsgSelect(){
+  const sel=document.getElementById('adminMsgTarget');
+  if(!sel)return;
+  sel.innerHTML='<option value="">Nutzer wählen...</option>';
+  users.filter(u=>u.role!=='Admin').forEach(u=>{
+    const opt=document.createElement('option');
+    opt.value=u.name; opt.textContent=u.name;
+    sel.appendChild(opt);
+  });
 }
 </script>
 </body>
